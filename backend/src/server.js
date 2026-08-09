@@ -5,6 +5,7 @@
 //2. Importe l’application Express définie dans app.js
 //3. Démarre le serveur sur le port 5000
 
+//permet de lire ton fichier .env
 require("dotenv").config();
 
 const app = require("./app");
