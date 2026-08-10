@@ -132,9 +132,54 @@ const updateBusinessProfile = async (req, res) => {
   }
 };
 
+const uploadBusinessLogo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Aucun fichier logo envoyé",
+      });
+    }
+
+    const existingProfile = await prisma.businessProfile.findUnique({
+      where: {
+        userId: req.user.id,
+      },
+    });
+
+    if (!existingProfile) {
+      return res.status(404).json({
+        message: "Aucun profil commerce trouvé",
+      });
+    }
+
+    const logoUrl = `/uploads/logos/${req.file.filename}`;
+
+    const updatedProfile = await prisma.businessProfile.update({
+      where: {
+        userId: req.user.id,
+      },
+      data: {
+        logoUrl,
+      },
+    });
+
+    return res.json({
+      message: "Logo mis à jour avec succès",
+      businessProfile: updatedProfile,
+    });
+  } catch (error) {
+    console.error("Erreur uploadBusinessLogo :", error);
+
+    return res.status(500).json({
+      message: "Erreur serveur lors de l'upload du logo",
+    });
+  }
+};
+
 
 module.exports = {
   createBusinessProfile,
   getBusinessProfile,
   updateBusinessProfile,
+  uploadBusinessLogo,
 };
