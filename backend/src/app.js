@@ -4,6 +4,7 @@ const path = require("path"); //importation du module path pour gérer les chemi
 const authRoutes = require("./routes/auth.routes"); //importation des routes d'authentification définies dans auth.routes.js
 
 const businessProfileRoutes = require("./routes/businessProfile.routes"); //importation des routes de profil commerce définies dans businessProfile.routes.js
+const customerRoutes = require("./routes/customer.routes"); //importation des routes de gestion des clients définies dans customer.routes.js
 
 const app = express();
 
@@ -25,5 +26,6 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes); //utilisation des routes d'authentification pour les requêtes commençant par /api/auth
 
 app.use("/api/business-profile", businessProfileRoutes); //utilisation des routes de profil commerce pour les requêtes commençant par /api/business-profile
+app.use("/api/customers", customerRoutes); //utilisation des routes de gestion des clients pour les requêtes commençant par /api/customers
 
 module.exports = app;
