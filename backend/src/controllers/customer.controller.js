@@ -10,6 +10,28 @@ const createCustomer = async (req, res) => {
       });
     }
 
+    if (!phone && !email) {
+      return res.status(400).json({
+        message: "Veuillez renseigner au moins un téléphone ou un email",
+      });
+    }
+
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        userId: req.user.id,
+        OR: [
+          phone ? { phone } : undefined,
+          email ? { email } : undefined,
+        ].filter(Boolean),
+      },
+    });
+
+    if (existingCustomer) {
+      return res.status(409).json({
+        message: "Un client existe déjà avec ce téléphone ou cet email",
+      });
+    }
+
     const customer = await prisma.customer.create({
       data: {
         userId: req.user.id,
@@ -172,4 +194,5 @@ module.exports = {
   getCustomers,
   getCustomerById,
   updateCustomer,
+  deleteCustomer,
 };

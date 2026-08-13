@@ -6,6 +6,8 @@ const authRoutes = require("./routes/auth.routes"); //importation des routes d'a
 const businessProfileRoutes = require("./routes/businessProfile.routes"); //importation des routes de profil commerce définies dans businessProfile.routes.js
 const customerRoutes = require("./routes/customer.routes"); //importation des routes de gestion des clients définies dans customer.routes.js
 
+const productRoutes = require("./routes/product.routes"); //importation des routes de gestion des produits définies dans product.routes.js
+
 const app = express();
 
 // Autoriser les requêtes venant du frontend
@@ -27,5 +29,7 @@ app.use("/api/auth", authRoutes); //utilisation des routes d'authentification po
 
 app.use("/api/business-profile", businessProfileRoutes); //utilisation des routes de profil commerce pour les requêtes commençant par /api/business-profile
 app.use("/api/customers", customerRoutes); //utilisation des routes de gestion des clients pour les requêtes commençant par /api/customers
+
+app.use("/api/products", productRoutes); //utilisation des routes de gestion des produits pour les requêtes commençant par /api/products
 
 module.exports = app;

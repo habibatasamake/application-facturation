@@ -1,0 +1,247 @@
+### ============================================================
+### TESTS API - APPLICATION DE FACTURATION
+### Fichier compatible avec l’extension VS Code "REST Client"
+### Backend attendu : http://localhost:5001/api
+###
+### Utilisation :
+### 1. Installer l’extension VS Code : REST Client
+### 2. Placer ce fichier dans le projet, par exemple :
+###    backend/tests/api-tests.http
+### 3. Lancer le backend :
+###    npm run dev
+### 4. Cliquer sur "Send Request" au-dessus de chaque requête
+###
+### Important :
+### - Après login, copie le token reçu dans la variable @token ci-dessous.
+### - Pour tester l’upload du logo, remplace le chemin du fichier image.
+### ============================================================
+
+@baseUrl = http://localhost:5001/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjMxZThiNmZhLTkxNGQtNGViMS04YTJhLTQyNGRhNmUwZmM1ZSIsImVtYWlsIjoiaGFiaWJhdGFAZXhhbXBsZS5jb20iLCJpYXQiOjE3ODY2MTI5MjEsImV4cCI6MTc4NzIxNzcyMX0.hPu-SWovBYXo6iRGkW68gIpcEfKNfYrBlF4RfoY6bWA
+@customerId = COLLER_ID_CLIENT_ICI
+@productId = COLLER_ID_PRODUIT_ICI
+
+
+### ============================================================
+### 1. AUTHENTIFICATION
+### ============================================================
+
+### 1.1 Créer un compte utilisateur
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Habibata Samake",
+  "email": "habibata@example.com",
+  "password": "test1234"
+}
+
+
+### 1.2 Connexion utilisateur
+### Copie le token reçu dans la variable @token en haut du fichier.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "habibata@example.com",
+  "password": "test1234"
+}
+
+
+### 1.3 Récupérer l’utilisateur connecté
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### 2. PROFIL COMMERCE
+### ============================================================
+
+### 2.1 Créer le profil commerce
+POST {{baseUrl}}/business-profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "businessName": "Boutique Habibata",
+  "phone": "+223 70 00 00 00",
+  "address": "Bamako",
+  "city": "Bamako",
+  "country": "Mali",
+  "currency": "FCFA"
+}
+
+
+### 2.2 Récupérer le profil commerce
+GET {{baseUrl}}/business-profile
+Authorization: Bearer {{token}}
+
+
+### 2.3 Modifier le profil commerce
+PUT {{baseUrl}}/business-profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "businessName": "Boutique Habibata Services",
+  "phone": "+223 76 00 00 00",
+  "address": "Bamako, Mali",
+  "city": "Bamako",
+  "country": "Mali",
+  "currency": "FCFA"
+}
+
+
+### 2.4 Uploader le logo du commerce
+### Remplace le chemin ci-dessous par le chemin réel de ton image.
+### Exemple Mac :
+### /Users/habibatasamake/Desktop/logo.png
+POST {{baseUrl}}/business-profile/logo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryTest
+
+------WebKitFormBoundaryTest
+Content-Disposition: form-data; name="logo"; filename="logo.png"
+Content-Type: image/png
+
+< /Users/habibatasamake/Desktop/logo.png
+------WebKitFormBoundaryTest--
+
+
+### ============================================================
+### 3. CLIENTS
+### ============================================================
+
+### 3.1 Créer un client
+POST {{baseUrl}}/customers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Awa Traoré",
+  "phone": "+223 70 11 22 33",
+  "email": "awa@example.com",
+  "address": "Bamako",
+  "city": "Bamako",
+  "country": "Mali"
+}
+
+
+### 3.2 Lister les clients
+### Copie ensuite l’id d’un client dans la variable @customerId en haut.
+GET {{baseUrl}}/customers
+Authorization: Bearer {{token}}
+
+
+### 3.3 Récupérer un client par id
+GET {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{token}}
+
+
+### 3.4 Modifier un client
+PUT {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Awa Traoré Diarra",
+  "phone": "+223 76 11 22 33",
+  "email": "awa.diarra@example.com",
+  "address": "ACI 2000, Bamako",
+  "city": "Bamako",
+  "country": "Mali"
+}
+
+
+### 3.5 Supprimer un client
+DELETE {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### 4. PRODUITS / CATALOGUE
+### ============================================================
+
+### 4.1 Créer un produit
+POST {{baseUrl}}/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Sac de riz",
+  "description": "Sac de riz 50kg",
+  "unitPrice": 25000,
+  "unit": "sac",
+  "taxRate": 0
+}
+
+
+### 4.2 Lister les produits actifs
+### Copie ensuite l’id d’un produit dans la variable @productId en haut.
+GET {{baseUrl}}/products
+Authorization: Bearer {{token}}
+
+
+### 4.3 Récupérer un produit par id
+GET {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{token}}
+
+
+### 4.4 Modifier un produit
+PUT {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Sac de riz premium",
+  "description": "Sac de riz parfumé 50kg",
+  "unitPrice": 27500,
+  "unit": "sac",
+  "taxRate": 0
+}
+
+
+### 4.5 Désactiver un produit
+### Le produit ne sera pas supprimé définitivement.
+### Son champ isActive passera à false.
+DELETE {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### 5. TESTS D’ERREUR UTILES
+### ============================================================
+
+### 5.1 Tester une route protégée sans token
+GET {{baseUrl}}/customers
+
+
+### 5.2 Tester un mauvais login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "habibata@example.com",
+  "password": "mauvaismotdepasse"
+}
+
+
+### 5.3 Tester la création d’un client sans nom
+POST {{baseUrl}}/customers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "phone": "+223 70 11 22 33",
+  "email": "client-sans-nom@example.com"
+}
+
+
+### 5.4 Tester la création d’un produit sans prix
+POST {{baseUrl}}/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Produit sans prix"
+}
