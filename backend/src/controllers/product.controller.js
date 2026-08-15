@@ -10,9 +10,24 @@ const createProduct = async (req, res) => {
       taxRate,
     } = req.body;
 
-    if (!name) {
+    const price = Number(unitPrice);
+    const tax = taxRate === undefined || taxRate === "" ? 0 : Number(taxRate);
+
+    if (!name || !name.trim()) {
       return res.status(400).json({
         message: "Le nom du produit est obligatoire",
+      });
+    }
+
+    if (!unit || !unit.trim()) {
+      return res.status(400).json({
+        message: "L’unité du produit est obligatoire",
+      });
+    }
+
+    if (!unitPrice || Number.isNaN(price) || price <= 0) {
+      return res.status(400).json({
+        message: "Le prix unitaire doit être supérieur à 0",
       });
     }
 
@@ -25,12 +40,12 @@ const createProduct = async (req, res) => {
     const product = await prisma.product.create({
       data: {
         userId: req.user.id,
-        name,
+        name: name.trim(),
         description,
-        unitPrice: Number(unitPrice),
-        unit,
-        taxRate: taxRate ? Number(taxRate) : null,
-      },
+        unitPrice: price,
+        unit: unit.trim(),
+        taxRate: tax,
+      }
     });
 
     return res.status(201).json({
