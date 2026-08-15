@@ -5,6 +5,8 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import BusinessProfilePage from "./pages/BusinessProfilePage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CustomersPage from "./pages/CustomersPage";
+import ProductsPage from "./pages/ProductsPage";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -20,6 +22,8 @@ function Navbar() {
       <Link to="/login">Connexion</Link>
       <Link to="/dashboard">Tableau de bord</Link>
       <Link to="/business-profile">Profil commerce</Link>
+      <Link to="/customers">Clients</Link>
+      <Link to="/products">Produits</Link>
 
       <button onClick={handleLogout}>
         Déconnexion
@@ -54,6 +58,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <BusinessProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customers"
+            element={
+              <ProtectedRoute>
+                <CustomersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoute>
+                <ProductsPage />
               </ProtectedRoute>
             }
           />
