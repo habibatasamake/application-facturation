@@ -8,6 +8,8 @@ const customerRoutes = require("./routes/customer.routes"); //importation des ro
 
 const productRoutes = require("./routes/product.routes"); //importation des routes de gestion des produits définies dans product.routes.js
 
+const invoiceRoutes = require("./routes/invoice.routes"); //importation des routes de gestion des factures définies dans invoice.routes.js
+
 const app = express();
 
 // Autoriser les requêtes venant du frontend
@@ -31,5 +33,7 @@ app.use("/api/business-profile", businessProfileRoutes); //utilisation des route
 app.use("/api/customers", customerRoutes); //utilisation des routes de gestion des clients pour les requêtes commençant par /api/customers
 
 app.use("/api/products", productRoutes); //utilisation des routes de gestion des produits pour les requêtes commençant par /api/products
+
+app.use("/api/invoices", invoiceRoutes); //utilisation des routes de gestion des factures pour les requêtes commençant par /api/invoices
 
 module.exports = app;
