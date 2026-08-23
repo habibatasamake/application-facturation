@@ -7,6 +7,8 @@ import BusinessProfilePage from "./pages/BusinessProfilePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CustomersPage from "./pages/CustomersPage";
 import ProductsPage from "./pages/ProductsPage";
+import InvoicesPage from "./pages/InvoicesPage";
+import CreateInvoicePage from "./pages/CreateInvoicePage";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ function Navbar() {
       <Link to="/business-profile">Profil commerce</Link>
       <Link to="/customers">Clients</Link>
       <Link to="/products">Produits</Link>
+      <Link to="/invoices">Factures</Link>
 
       <button onClick={handleLogout}>
         Déconnexion
@@ -74,6 +77,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProductsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedRoute>
+                <InvoicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/new"
+            element={
+              <ProtectedRoute>
+                <CreateInvoicePage />
               </ProtectedRoute>
             }
           />
