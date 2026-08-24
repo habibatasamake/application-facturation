@@ -8,6 +8,7 @@ function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
   const formatAmount = (amount) => {
     return `${Number(amount || 0).toLocaleString("fr-FR")} FCFA`;
@@ -49,6 +50,58 @@ function InvoicesPage() {
     fetchInvoices();
   }, []);
 
+  const formatPhoneForWhatsApp = (phone) => {
+  if (!phone) return "";
+
+  return phone.replace(/\D/g, "");
+};
+
+const handleShareWhatsApp = async (invoice) => {
+  setError("");
+  setMessage("");
+
+  if (!invoice.pdfUrl) {
+    setError("Cette facture n’a pas encore de PDF");
+    return;
+  }
+
+  const pdfLink = `${BACKEND_URL}${invoice.pdfUrl}`;
+
+  const whatsappMessage = `Bonjour ${invoice.customerName}, voici votre facture ${invoice.invoiceNumber} d'un montant de ${formatAmount(
+    invoice.total
+  )}. Vous pouvez consulter le PDF ici : ${pdfLink}`;
+
+  const phone = formatPhoneForWhatsApp(invoice.customerPhone);
+
+  const whatsappUrl = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`
+    : `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+
+  window.open(whatsappUrl, "_blank");
+
+  try {
+    const response = await api.patch(
+      `/invoices/${invoice.id}/share-status`,
+      {
+        shareStatus: "SHARED",
+      }
+    );
+
+    setInvoices(
+      invoices.map((item) =>
+        item.id === invoice.id ? response.data.invoice : item
+      )
+    );
+
+    setMessage("Facture partagée via WhatsApp");
+  } catch (error) {
+    setError(
+      error.response?.data?.message ||
+        "Erreur lors de la mise à jour du statut de partage"
+    );
+   }
+  };
+
   if (isLoading) {
     return <p>Chargement des factures...</p>;
   }
@@ -58,6 +111,7 @@ function InvoicesPage() {
       <h1>Factures</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {message && <p style={{ color: "green" }}>{message}</p>}
 
       <Link to="/invoices/new">
         <button>Créer une facture</button>
@@ -78,6 +132,7 @@ function InvoicesPage() {
               <th>Partage</th>
               <th>Date et heure d'émission</th>
               <th>PDF</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -104,7 +159,13 @@ function InvoicesPage() {
                   ) : (
                     "Aucun PDF"
                   )}
+                  
                 </td>
+                <td>
+                    <button onClick={() => handleShareWhatsApp(invoice)}>
+                      Partager WhatsApp
+                    </button>
+                  </td>
               </tr>
             ))}
           </tbody>

@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+const BACKEND_URL = "http://localhost:5001";
+
 import api from "../api/axiosConfig";
 
 function CreateInvoicePage() {
@@ -28,6 +31,9 @@ function CreateInvoicePage() {
   const [preview, setPreview] = useState(null);
   const [message, setMessage] = useState("");
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  const [createdInvoice, setCreatedInvoice] = useState(null);
+  const [isCreateLoading, setIsCreateLoading] = useState(false);
 
   const formatAmount = (amount) => {
     return `${Number(amount || 0).toLocaleString("fr-FR")} FCFA`;
@@ -212,6 +218,67 @@ function CreateInvoicePage() {
     }
   };
 
+  const handleCreateInvoice = async () => {
+    setError("");
+    setMessage("");
+    setCreatedInvoice(null);
+    setIsCreateLoading(true);
+
+    try {
+      const payload = buildInvoicePayload();
+
+      const response = await api.post("/invoices", payload);
+
+      setCreatedInvoice(response.data.invoice);
+      setMessage(response.data.message);
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Erreur lors de la validation de la facture"
+      );
+    } finally {
+      setIsCreateLoading(false);
+    }
+  };
+
+  const handleShareWhatsApp = async () => {
+    if (!createdInvoice) {
+      return;
+    }
+
+    const pdfLink = `${BACKEND_URL}${createdInvoice.pdfUrl}`;
+
+    const message = `Bonjour ${createdInvoice.customerName}, voici votre facture ${createdInvoice.invoiceNumber} d'un montant de ${formatAmount(
+      createdInvoice.total
+    )}. Vous pouvez consulter le PDF ici : ${pdfLink}`;
+
+    const phone = formatPhoneForWhatsApp(createdInvoice.customerPhone);
+
+    const whatsappUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    window.open(whatsappUrl, "_blank");
+
+    try {
+      const response = await api.patch(
+        `/invoices/${createdInvoice.id}/share-status`,
+        {
+          shareStatus: "SHARED",
+        }
+      );
+
+      setCreatedInvoice(response.data.invoice);
+      setMessage("Lien WhatsApp ouvert et statut de partage mis à jour");
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          "Erreur lors de la mise à jour du statut de partage"
+      );
+    }
+  };
+
   const subTotal = invoiceItems.reduce(
     (sum, item) => sum + item.lineSubTotal,
     0
@@ -223,6 +290,12 @@ function CreateInvoicePage() {
   );
 
   const total = invoiceItems.reduce((sum, item) => sum + item.lineTotal, 0);
+
+  const formatPhoneForWhatsApp = (phone) => {
+      if (!phone) return "";
+
+      return phone.replace(/\D/g, "");
+    };
 
   if (isLoading) {
     return <p>Chargement...</p>;
@@ -518,6 +591,50 @@ function CreateInvoicePage() {
                 <strong>Notes :</strong> {preview.notes}
               </p>
             )}
+
+            <br />
+
+            <button onClick={handleCreateInvoice} disabled={isCreateLoading}>
+              {isCreateLoading ? "Validation..." : "Valider la facture"}
+            </button>
+          </div>
+        )}
+
+        {createdInvoice && (
+          <div>
+            <hr />
+
+            <h2>Facture créée</h2>
+
+            <p>
+              <strong>Numéro :</strong> {createdInvoice.invoiceNumber}
+            </p>
+
+            <p>
+              <strong>Total :</strong> {formatAmount(createdInvoice.total)}
+            </p>
+
+            {createdInvoice.pdfUrl && (
+              <p>
+                <a
+                  href={`${BACKEND_URL}${createdInvoice.pdfUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Ouvrir le PDF
+                </a>
+              </p>
+            )}
+            <button onClick={handleShareWhatsApp}>
+              Partager via WhatsApp
+            </button>
+            
+            <br />
+            <br />
+
+            <Link to="/invoices">
+              <button>Retour à l’historique des factures</button>
+            </Link>
           </div>
         )}
         </>
