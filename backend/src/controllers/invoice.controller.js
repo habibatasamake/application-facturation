@@ -326,10 +326,35 @@ const createInvoice = async (req, res) => {
 
 const getInvoices = async (req, res) => {
   try {
+    const { type, status, shareStatus, search } = req.query;
+
+    const where = {
+      userId: req.user.id,
+    };
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (shareStatus) {
+      where.shareStatus = shareStatus;
+    }
+
+    if (search && search.trim()) {
+      const term = search.trim();
+      where.OR = [
+        { invoiceNumber: { contains: term, mode: "insensitive" } },
+        { customerName: { contains: term, mode: "insensitive" } },
+        { customerPhone: { contains: term, mode: "insensitive" } },
+      ];
+    }
+
     const invoices = await prisma.invoice.findMany({
-      where: {
-        userId: req.user.id,
-      },
+      where,
       orderBy: {
         createdAt: "desc",
       },
@@ -450,10 +475,147 @@ const updateInvoiceShareStatus = async (req, res) => {
   }
 };
 
+const updateInvoicePaymentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ["ISSUED", "PAID", "PARTIALLY_PAID", "CANCELED"];
+
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Statut de paiement invalide (valeurs possibles: ISSUED, PAID, PARTIALLY_PAID, CANCELED)",
+      });
+    }
+
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: {
+        id,
+        userId: req.user.id,
+      },
+    });
+
+    if (!existingInvoice) {
+      return res.status(404).json({
+        message: "Facture introuvable",
+      });
+    }
+
+    const updatedInvoice = await prisma.invoice.update({
+      where: {
+        id,
+      },
+      data: {
+        status,
+      },
+    });
+
+    return res.status(200).json({
+      message: `Statut mis à jour : ${status}`,
+      invoice: updatedInvoice,
+    });
+  } catch (error) {
+    console.error("Erreur updateInvoicePaymentStatus :", error);
+
+    return res.status(500).json({
+      message: "Erreur serveur lors de la mise à jour du statut de paiement",
+    });
+  }
+};
+
+const convertQuoteToInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const quote = await prisma.invoice.findFirst({
+      where: {
+        id,
+        userId: req.user.id,
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!quote) {
+      return res.status(404).json({
+        message: "Devis introuvable",
+      });
+    }
+
+    if (quote.type !== "QUOTE") {
+      return res.status(400).json({
+        message: "Ce document est déjà une facture commerciale",
+      });
+    }
+
+    // Convertir le devis en facture avec nouveau numéro dans une transaction
+    const convertedInvoice = await prisma.$transaction(async (tx) => {
+      const invoiceNumber = await generateInvoiceNumber({
+        userId: req.user.id,
+        type: "INVOICE",
+        db: tx,
+      });
+
+      return tx.invoice.update({
+        where: {
+          id: quote.id,
+        },
+        data: {
+          type: "INVOICE",
+          invoiceNumber,
+          status: "ISSUED",
+          issuedAt: new Date(),
+        },
+        include: {
+          items: true,
+        },
+      });
+    });
+
+    // Régénérer le PDF avec l'en-tête "FACTURE" et le nouveau numéro
+    const businessProfile = await prisma.businessProfile.findUnique({
+      where: {
+        userId: req.user.id,
+      },
+    });
+
+    const { pdfUrl } = await generateInvoicePdf({
+      invoice: convertedInvoice,
+      businessProfile,
+    });
+
+    const finalInvoice = await prisma.invoice.update({
+      where: {
+        id: convertedInvoice.id,
+      },
+      data: {
+        pdfUrl,
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: `Devis converti en Facture avec succès (${finalInvoice.invoiceNumber})`,
+      invoice: finalInvoice,
+    });
+  } catch (error) {
+    console.error("Erreur convertQuoteToInvoice :", error);
+
+    return res.status(500).json({
+      message: "Erreur serveur lors de la conversion du devis",
+    });
+  }
+};
+
 module.exports = {
   previewInvoice,
   createInvoice,
   getInvoices,
   updateInvoiceShareStatus,
+  updateInvoicePaymentStatus,
+  convertQuoteToInvoice,
   getInvoiceById,
 };

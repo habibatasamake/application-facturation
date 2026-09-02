@@ -3,10 +3,10 @@ const fs = require("fs");
 const path = require("path");
 const { getAccentColorFromLogo } = require("./brandColor.service");
 
-const ACCENT_COLOR = "#8CC63F";
-const TEXT_COLOR = "#111111";
-const LIGHT_GRAY = "#F4F4F4";
-const BORDER_COLOR = "#D0D0D0";
+const TEXT_COLOR = "#0F172A";
+const MUTED_TEXT = "#64748B";
+const LIGHT_GRAY = "#F8FAFC";
+const BORDER_COLOR = "#E2E8F0";
 
 const formatAmount = (amount, currency = "FCFA") => {
   const value = Number(amount || 0);
@@ -23,31 +23,17 @@ const formatAmount = (amount, currency = "FCFA") => {
 };
 
 const formatDate = (date) => {
+  if (!date) return new Date().toLocaleDateString("fr-FR");
   return new Date(date).toLocaleDateString("fr-FR");
-};
-
-const drawTextLine = (doc, label, value, x, y) => {
-  if (!value) return y;
-
-  doc
-    .fillColor(TEXT_COLOR)
-    .fontSize(9)
-    .font("Helvetica-Bold")
-    .text(`${label} :`, x, y, { continued: true })
-    .font("Helvetica")
-    .text(` ${value}`);
-
-  return doc.y + 4;
 };
 
 const drawLogo = (doc, businessProfile, x, y) => {
   if (!businessProfile?.logoUrl) {
     doc
       .font("Helvetica-Bold")
-      .fontSize(12)
+      .fontSize(16)
       .fillColor(TEXT_COLOR)
-      .text("LOGO", x, y);
-
+      .text(businessProfile?.businessName || "COMMERCE", x, y);
     return;
   }
 
@@ -58,29 +44,38 @@ const drawLogo = (doc, businessProfile, x, y) => {
   );
 
   if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, x, y, {
-      fit: [90, 60],
-    });
+    try {
+      doc.image(logoPath, x, y, {
+        fit: [100, 50],
+      });
+    } catch (e) {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(16)
+        .fillColor(TEXT_COLOR)
+        .text(businessProfile?.businessName || "COMMERCE", x, y);
+    }
   } else {
     doc
       .font("Helvetica-Bold")
-      .fontSize(12)
+      .fontSize(16)
       .fillColor(TEXT_COLOR)
-      .text("LOGO", x, y);
+      .text(businessProfile?.businessName || "COMMERCE", x, y);
   }
 };
 
-const drawHeader = (doc, invoice, businessProfile) => {
-  const title = invoice.type === "QUOTE" ? "DEVIS" : "FACTURE";
-  const numberLabel = invoice.type === "QUOTE" ? "DEVIS N°" : "FACTURE N°";
+const drawHeader = (doc, invoice, businessProfile, accentColor) => {
+  const isQuote = invoice.type === "QUOTE";
+  const title = isQuote ? "DEVIS" : "FACTURE";
+  const numberLabel = isQuote ? "Devis N°" : "Facture N°";
 
-  drawLogo(doc, businessProfile, 50, 45);
+  drawLogo(doc, businessProfile, 40, 35);
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(34)
-    .fillColor(TEXT_COLOR)
-    .text(title, 330, 45, {
+    .fontSize(24)
+    .fillColor(accentColor)
+    .text(title, 340, 35, {
       width: 215,
       align: "right",
     });
@@ -88,7 +83,8 @@ const drawHeader = (doc, invoice, businessProfile) => {
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
-    .text(`${numberLabel} : ${invoice.invoiceNumber}`, 330, 95, {
+    .fillColor(TEXT_COLOR)
+    .text(`${numberLabel} : ${invoice.invoiceNumber}`, 340, 68, {
       width: 215,
       align: "right",
     });
@@ -96,284 +92,316 @@ const drawHeader = (doc, invoice, businessProfile) => {
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(`Date : ${formatDate(invoice.issuedAt)}`, 330, 115, {
+    .fillColor(MUTED_TEXT)
+    .text(`Date d'émission : ${formatDate(invoice.issuedAt || invoice.createdAt)}`, 340, 84, {
       width: 215,
       align: "right",
     });
 
+  // Ligne de séparation
   doc
-    .moveTo(50, 145)
-    .lineTo(545, 145)
-    .lineWidth(1)
-    .strokeColor(TEXT_COLOR)
+    .moveTo(40, 105)
+    .lineTo(555, 105)
+    .lineWidth(1.5)
+    .strokeColor(accentColor)
     .stroke();
 };
 
 const drawParties = (doc, invoice, businessProfile) => {
-  const leftX = 50;
+  const leftX = 40;
   const rightX = 315;
-  const topY = 170;
+  const topY = 120;
+
+  // Box Émetteur
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .fillColor(MUTED_TEXT)
+    .text("ÉMETTEUR (VENDEUR)", leftX, topY);
 
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(TEXT_COLOR)
-    .text("ÉMETTEUR", leftX, topY);
+    .text(businessProfile?.businessName || "Mon Commerce", leftX, topY + 14);
 
-  let yLeft = topY + 22;
+  let yLeft = topY + 30;
+  if (businessProfile?.phone) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(`Tél : ${businessProfile.phone}`, leftX, yLeft);
+    yLeft += 12;
+  }
+  if (businessProfile?.address) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(businessProfile.address, leftX, yLeft);
+    yLeft += 12;
+  }
+  const location = [businessProfile?.city, businessProfile?.country].filter(Boolean).join(", ");
+  if (location && (!businessProfile?.address || !businessProfile.address.toLowerCase().includes(location.toLowerCase()))) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(location, leftX, yLeft);
+    yLeft += 12;
+  }
 
+  // Box Destinataire
   doc
     .font("Helvetica-Bold")
-    .fontSize(10)
-    .text(businessProfile?.businessName || "Mon commerce", leftX, yLeft);
-
-  yLeft += 18;
-
-  yLeft = drawTextLine(doc, "Téléphone", businessProfile?.phone, leftX, yLeft);
-  yLeft = drawTextLine(doc, "Adresse", businessProfile?.address, leftX, yLeft);
-  yLeft = drawTextLine(doc, "Ville", businessProfile?.city, leftX, yLeft);
-  yLeft = drawTextLine(doc, "Pays", businessProfile?.country, leftX, yLeft);
+    .fontSize(9)
+    .fillColor(MUTED_TEXT)
+    .text("DESTINATAIRE (CLIENT)", rightX, topY, { width: 240, align: "right" });
 
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(TEXT_COLOR)
-    .text("DESTINATAIRE", rightX, topY, {
-      width: 230,
-      align: "right",
-    });
+    .text(invoice.customerName, rightX, topY + 14, { width: 240, align: "right" });
 
-  let yRight = topY + 22;
+  let yRight = topY + 30;
+  if (invoice.customerPhone) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(`Tél : ${invoice.customerPhone}`, rightX, yRight, { width: 240, align: "right" });
+    yRight += 12;
+  }
+  if (invoice.customerEmail) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(invoice.customerEmail, rightX, yRight, { width: 240, align: "right" });
+    yRight += 12;
+  }
+  if (invoice.customerAddress) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(invoice.customerAddress, rightX, yRight, { width: 240, align: "right" });
+    yRight += 12;
+  }
+  const custLocation = [invoice.customerCity, invoice.customerCountry].filter(Boolean).join(", ");
+  if (custLocation && (!invoice.customerAddress || !invoice.customerAddress.toLowerCase().includes(custLocation.toLowerCase()))) {
+    doc.font("Helvetica").fontSize(8.5).fillColor(MUTED_TEXT).text(custLocation, rightX, yRight, { width: 240, align: "right" });
+    yRight += 12;
+  }
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(10)
-    .text(invoice.customerName, rightX, yRight, {
-      width: 230,
-      align: "right",
-    });
-
-  yRight += 18;
-
-  const customerLines = [
-    ["Téléphone", invoice.customerPhone],
-    ["Email", invoice.customerEmail],
-    ["Adresse", invoice.customerAddress],
-    ["Ville", invoice.customerCity],
-    ["Pays", invoice.customerCountry],
-  ];
-
-  customerLines.forEach(([label, value]) => {
-    if (value) {
-      doc
-        .font("Helvetica")
-        .fontSize(9)
-        .fillColor(TEXT_COLOR)
-        .text(`${label} : ${value}`, rightX, yRight, {
-          width: 230,
-          align: "right",
-        });
-
-      yRight += 14;
-    }
-  });
+  return Math.max(yLeft, yRight) + 20;
 };
 
 const drawTableHeader = (doc, y, accentColor) => {
   doc
-    .rect(50, y, 495, 24)
+    .rect(40, y, 515, 20)
     .fillColor(accentColor)
     .fill();
 
   doc
     .fillColor("#FFFFFF")
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("Description", 58, y + 8, { width: 190 })
-    .text("Prix unitaire", 250, y + 8, { width: 80, align: "right" })
-    .text("Unité", 340, y + 8, { width: 45, align: "center" })
-    .text("Qté", 395, y + 8, { width: 40, align: "center" })
-    .text("Montant", 445, y + 8, { width: 90, align: "right" });
+    .fontSize(8.5)
+    .text("Désignation / Description", 48, y + 6, { width: 210 })
+    .text("Prix unitaire", 265, y + 6, { width: 80, align: "right" })
+    .text("Unité", 355, y + 6, { width: 40, align: "center" })
+    .text("Qté", 400, y + 6, { width: 35, align: "center" })
+    .text("Montant", 445, y + 6, { width: 100, align: "right" });
 };
 
-const drawItemsTable = (doc, invoice, currency, accentColor) => {
-  let y = 310;
+const drawItemsTable = (doc, invoice, currency, accentColor, startY) => {
+  let y = startY;
 
   drawTableHeader(doc, y, accentColor);
-  y += 24;
+  y += 20;
 
   invoice.items.forEach((item, index) => {
-    const rowHeight = 34;
+    const hasDesc = !!item.description;
+    const rowHeight = hasDesc ? 30 : 22;
 
-    if (y + rowHeight > 700) {
+    // Si on approche du bas de page et qu'il y a trop d'items, ajouter une page
+    if (y + rowHeight > 680) {
       doc.addPage();
-      y = 60;
+      y = 40;
       drawTableHeader(doc, y, accentColor);
-      y += 24;
+      y += 20;
     }
 
     if (index % 2 === 0) {
       doc
-        .rect(50, y, 495, rowHeight)
+        .rect(40, y, 515, rowHeight)
         .fillColor(LIGHT_GRAY)
         .fill();
     }
 
     doc
-      .rect(50, y, 495, rowHeight)
+      .rect(40, y, 515, rowHeight)
       .strokeColor(BORDER_COLOR)
       .lineWidth(0.5)
       .stroke();
 
     doc
       .fillColor(TEXT_COLOR)
-      .font("Helvetica")
-      .fontSize(9)
-      .text(item.productName, 58, y + 8, { width: 180 });
+      .font("Helvetica-Bold")
+      .fontSize(8.5)
+      .text(item.productName, 48, y + 6, { width: 210 });
 
-    if (item.description) {
+    if (hasDesc) {
       doc
-        .fontSize(8)
-        .fillColor("#555555")
-        .text(item.description, 58, y + 20, { width: 180 });
+        .fontSize(7.5)
+        .font("Helvetica")
+        .fillColor(MUTED_TEXT)
+        .text(item.description, 48, y + 17, { width: 210 });
     }
 
     doc
       .fillColor(TEXT_COLOR)
-      .fontSize(9)
-      .text(formatAmount(item.unitPrice, currency), 250, y + 10, {
+      .font("Helvetica")
+      .fontSize(8.5)
+      .text(formatAmount(item.unitPrice, currency), 265, y + 6, {
         width: 80,
         align: "right",
       })
-      .text(item.unit || "-", 340, y + 10, {
-        width: 45,
-        align: "center",
-      })
-      .text(String(item.quantity), 395, y + 10, {
+      .text(item.unit || "-", 355, y + 6, {
         width: 40,
         align: "center",
       })
-      .font("Helvetica-Bold")
-      .text(formatAmount(item.lineTotal, currency), 445, y + 10, {
-        width: 90,
-        align: "right",
+      .text(String(item.quantity), 400, y + 6, {
+        width: 35,
+        align: "center",
       })
-      .font("Helvetica");
+      .font("Helvetica-Bold")
+      .text(formatAmount(item.lineTotal, currency), 445, y + 6, {
+        width: 100,
+        align: "right",
+      });
 
     y += rowHeight;
   });
 
-  return y + 25;
+  return y + 14;
 };
 
-const drawTotals = (doc, invoice, currency, y) => {
-  const boxX = 335;
-  const labelX = 350;
-  const valueX = 445;
+const drawTotalsAndNotes = (doc, invoice, currency, y, accentColor) => {
+  let currentY = y;
+
+  // Si l'espace restant avant le bas est trop court pour le bloc de clôture (besoin d'environ 110 pt)
+  if (currentY > 640) {
+    doc.addPage();
+    currentY = 40;
+  }
+
+  // --- BLOC GAUCHE : NOTES & SIGNATURE ---
+  const leftX = 40;
+  const leftWidth = 270;
 
   doc
-    .rect(boxX, y, 210, 90)
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor(TEXT_COLOR)
+    .text("CONDITIONS / NOTES :", leftX, currentY);
+
+  doc
+    .rect(leftX, currentY + 12, leftWidth, 42)
+    .strokeColor(BORDER_COLOR)
+    .lineWidth(0.5)
+    .stroke();
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(MUTED_TEXT)
+    .text(invoice.notes || "Paiement à réception. Merci pour votre confiance.", leftX + 8, currentY + 18, {
+      width: leftWidth - 16,
+      height: 32,
+    });
+
+  // Cadre signature
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .fillColor(MUTED_TEXT)
+    .text("Signature & Cachet :", leftX, currentY + 60);
+
+  doc
+    .rect(leftX, currentY + 72, leftWidth, 36)
+    .strokeColor(BORDER_COLOR)
+    .lineWidth(0.5)
+    .stroke();
+
+  // --- BLOC DROIT : TOTAUX ---
+  const rightX = 330;
+  const rightWidth = 225;
+  const labelX = rightX + 12;
+  const valX = rightX + 100;
+  const valW = rightWidth - 112;
+
+  doc
+    .rect(rightX, currentY, rightWidth, 108)
     .fillColor("#FFFFFF")
     .fill()
     .strokeColor(BORDER_COLOR)
+    .lineWidth(1)
     .stroke();
 
+  // Sous-total
   doc
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor(MUTED_TEXT)
+    .text("Sous-total HT :", labelX, currentY + 12)
+    .font("Helvetica-Bold")
     .fillColor(TEXT_COLOR)
-    .font("Helvetica-Bold")
-    .fontSize(10)
-    .text("Sous-total", labelX, y + 15)
-    .font("Helvetica")
-    .text(formatAmount(invoice.subTotal, currency), valueX, y + 15, {
-      width: 85,
+    .text(formatAmount(invoice.subTotal, currency), valX, currentY + 12, {
+      width: valW,
       align: "right",
     });
 
+  // TVA / Taxes
   doc
-    .font("Helvetica-Bold")
-    .text("Taxe", labelX, y + 38)
     .font("Helvetica")
-    .text(formatAmount(invoice.taxTotal, currency), valueX, y + 38, {
-      width: 85,
+    .fontSize(9)
+    .fillColor(MUTED_TEXT)
+    .text("TVA / Taxes :", labelX, currentY + 34)
+    .font("Helvetica-Bold")
+    .fillColor(TEXT_COLOR)
+    .text(formatAmount(invoice.taxTotal, currency), valX, currentY + 34, {
+      width: valW,
       align: "right",
     });
 
+  // Ligne de séparation interne totaux
   doc
-    .moveTo(labelX, y + 60)
-    .lineTo(530, y + 60)
+    .moveTo(labelX, currentY + 54)
+    .lineTo(rightX + rightWidth - 12, currentY + 54)
     .strokeColor(BORDER_COLOR)
     .stroke();
 
+  // Fond bandeau Total TTC
   doc
-    .font("Helvetica-Bold")
-    .fontSize(13)
-    .fillColor(TEXT_COLOR)
-    .text("TOTAL TTC", labelX, y + 68)
-    .text(formatAmount(invoice.total, currency), valueX, y + 68, {
-      width: 85,
-      align: "right",
-    });
-};
-
-const drawNotesAndSignature = (doc, invoice, y) => {
-  const notesX = 50;
-  const signatureX = 365;
+    .rect(rightX + 1, currentY + 62, rightWidth - 2, 45)
+    .fillColor(LIGHT_GRAY)
+    .fill();
 
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(TEXT_COLOR)
-    .text("RÈGLEMENT / NOTES", notesX, y);
-
-  doc
-    .rect(notesX, y + 20, 230, 85)
-    .strokeColor(BORDER_COLOR)
-    .stroke();
-
-  doc
-    .font("Helvetica")
-    .fontSize(9)
-    .fillColor(TEXT_COLOR)
-    .text(
-      invoice.notes || "Merci pour votre confiance.",
-      notesX + 10,
-      y + 32,
-      {
-        width: 210,
-        height: 60,
-      }
-    );
-
-  doc
+    .text("TOTAL TTC :", labelX, currentY + 76)
     .font("Helvetica-Bold")
-    .fontSize(10)
-    .text("Signature", signatureX, y + 5, {
-      width: 160,
+    .fontSize(12)
+    .fillColor(accentColor)
+    .text(formatAmount(invoice.total, currency), valX, currentY + 75, {
+      width: valW,
       align: "right",
     });
-
-  doc
-    .rect(signatureX, y + 28, 180, 77)
-    .strokeColor(BORDER_COLOR)
-    .stroke();
 };
 
 const drawFooter = (doc, businessProfile) => {
-  const footerY = 790;
+  const footerY = 805; // Placé juste au-dessus du bas de la page A4 (841.89 pt) avec margin: 0
+
+  const companyInfo = [
+    businessProfile?.businessName,
+    businessProfile?.phone ? `Tél: ${businessProfile.phone}` : null,
+    businessProfile?.address,
+    businessProfile?.city,
+    businessProfile?.country,
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   doc
     .font("Helvetica")
-    .fontSize(8)
-    .fillColor("#666666")
-    .text(
-      businessProfile?.businessName || "Mon commerce",
-      50,
-      footerY,
-      {
-        width: 495,
-        align: "center",
-      }
-    );
+    .fontSize(7.5)
+    .fillColor(MUTED_TEXT)
+    .text(companyInfo || "Facture générée automatiquement", 40, footerY, {
+      width: 515,
+      align: "center",
+      lineBreak: false,
+    });
 };
 
 const generateInvoicePdf = async ({ invoice, businessProfile }) => {
@@ -393,7 +421,13 @@ const generateInvoicePdf = async ({ invoice, businessProfile }) => {
 
       const doc = new PDFDocument({
         size: "A4",
-        margin: 50,
+        margins: {
+          top: 35,
+          bottom: 25,
+          left: 40,
+          right: 40,
+        },
+        autoFirstPage: true,
       });
 
       const stream = fs.createWriteStream(filePath);
@@ -401,20 +435,11 @@ const generateInvoicePdf = async ({ invoice, businessProfile }) => {
 
       const currency = businessProfile?.currency || "FCFA";
 
-      drawHeader(doc, invoice, businessProfile);
-      drawParties(doc, invoice, businessProfile);
+      drawHeader(doc, invoice, businessProfile, accentColor);
+      const partiesEndY = drawParties(doc, invoice, businessProfile);
+      const tableEndY = drawItemsTable(doc, invoice, currency, accentColor, partiesEndY);
 
-      const tableEndY = drawItemsTable(doc, invoice, currency, accentColor);
-
-      let bottomY = tableEndY;
-
-      if (bottomY > 610) {
-        doc.addPage();
-        bottomY = 80;
-      }
-
-      drawTotals(doc, invoice, currency, bottomY);
-      drawNotesAndSignature(doc, invoice, bottomY + 120);
+      drawTotalsAndNotes(doc, invoice, currency, tableEndY, accentColor);
       drawFooter(doc, businessProfile);
 
       doc.end();

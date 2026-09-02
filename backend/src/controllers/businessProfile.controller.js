@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const prisma = require("../config/prisma");
 
 const createBusinessProfile = async (req, res) => {
@@ -150,6 +152,22 @@ const uploadBusinessLogo = async (req, res) => {
       return res.status(404).json({
         message: "Aucun profil commerce trouvé",
       });
+    }
+
+    // Supprimer l'ancien logo du disque s'il existe pour libérer l'espace
+    if (existingProfile.logoUrl) {
+      try {
+        const oldLogoPath = path.join(
+          __dirname,
+          "../..",
+          existingProfile.logoUrl.replace(/^\/+/, "")
+        );
+        if (fs.existsSync(oldLogoPath)) {
+          fs.unlinkSync(oldLogoPath);
+        }
+      } catch (fileErr) {
+        console.warn("Impossible de supprimer l'ancien logo :", fileErr.message);
+      }
     }
 
     const logoUrl = `/uploads/logos/${req.file.filename}`;
