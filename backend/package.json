@@ -26,7 +26,8 @@
     "multer": "^2.2.0",
     "node-vibrant": "^4.0.4",
     "pdfkit": "^0.19.1",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Store, Phone, MapPin, Building, Globe, Coins, Check } from "lucide-react";
+import { Store, Phone, MapPin, Building, Globe, Coins, Check, CreditCard, QrCode, FileText } from "lucide-react";
 
 function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer" }) {
   const [formData, setFormData] = useState({
@@ -9,6 +9,10 @@ function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer
     city: initialData?.city || "",
     country: initialData?.country || "",
     currency: initialData?.currency || "FCFA",
+    waveNumber: initialData?.waveNumber || "",
+    orangeMoneyNumber: initialData?.orangeMoneyNumber || "",
+    momoNumber: initialData?.momoNumber || "",
+    paymentInstructions: initialData?.paymentInstructions || "",
   });
 
   const handleChange = (event) => {
@@ -26,6 +30,12 @@ function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer
 
   return (
     <form onSubmit={handleSubmit}>
+      {/* 1. Informations Générales */}
+      <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--primary)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <Store size={18} />
+        Coordonnées de l'entreprise
+      </h3>
+
       <div className="form-group">
         <label htmlFor="business-name">Nom commercial de l'entreprise *</label>
         <div className="input-wrapper">
@@ -45,7 +55,7 @@ function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer
 
       <div className="form-row">
         <div className="form-group">
-          <label htmlFor="business-phone">Téléphone de contact</label>
+          <label htmlFor="business-phone">Téléphone principal</label>
           <div className="input-wrapper">
             <Phone className="input-icon" size={18} />
             <input
@@ -62,21 +72,18 @@ function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer
 
         <div className="form-group">
           <label htmlFor="business-currency">Devise principale</label>
-          <div className="input-wrapper">
-            <Coins className="input-icon" size={18} />
-            <select
-              id="business-currency"
-              name="currency"
-              className="input-with-icon"
-              value={formData.currency}
-              onChange={handleChange}
-            >
-              <option value="FCFA">FCFA (Franc CFA)</option>
-              <option value="EUR">EUR (€ Euro)</option>
-              <option value="USD">USD ($ Dollar)</option>
-              <option value="GNF">GNF (Franc Guinéen)</option>
-            </select>
-          </div>
+          <select
+            id="business-currency"
+            name="currency"
+            value={formData.currency}
+            onChange={handleChange}
+            style={{ fontWeight: 600 }}
+          >
+            <option value="FCFA">FCFA (Franc CFA)</option>
+            <option value="EUR">EUR (€ Euro)</option>
+            <option value="USD">USD ($ Dollar)</option>
+            <option value="GNF">GNF (Franc Guinéen)</option>
+          </select>
         </div>
       </div>
 
@@ -111,7 +118,7 @@ function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer
               className="input-with-icon"
               value={formData.city}
               onChange={handleChange}
-              placeholder="Ex : Dakar ou Bamako"
+              placeholder="Ex : Bamako ou Dakar"
             />
           </div>
         </div>
@@ -127,13 +134,101 @@ function BusinessProfileForm({ initialData, onSubmit, submitLabel = "Enregistrer
               className="input-with-icon"
               value={formData.country}
               onChange={handleChange}
-              placeholder="Ex : Sénégal ou Mali"
+              placeholder="Ex : Mali ou Sénégal"
             />
           </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+      {/* 2. Coordonnées Mobile Money & QR Code */}
+      <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1.5px dashed var(--border)" }}>
+        <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--accent-gold-hover)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <QrCode size={18} />
+          Paiements Mobile Money & QR Code
+        </h3>
+        <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "16px" }}>
+          Ces coordonnées seront encodées dans le QR Code de vos factures et partagées automatiquement par WhatsApp.
+        </p>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="business-wave" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#0284C7", display: "inline-block" }}></span>
+              Numéro ou lien Wave
+            </label>
+            <div className="input-wrapper">
+              <CreditCard className="input-icon" size={18} />
+              <input
+                id="business-wave"
+                type="text"
+                name="waveNumber"
+                className="input-with-icon"
+                value={formData.waveNumber}
+                onChange={handleChange}
+                placeholder="Ex : +223 76 00 00 00 ou lien"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="business-om" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#EA580C", display: "inline-block" }}></span>
+              Numéro Orange Money
+            </label>
+            <div className="input-wrapper">
+              <CreditCard className="input-icon" size={18} />
+              <input
+                id="business-om"
+                type="text"
+                name="orangeMoneyNumber"
+                className="input-with-icon"
+                value={formData.orangeMoneyNumber}
+                onChange={handleChange}
+                placeholder="Ex : +223 70 00 00 00"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="business-momo" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#CA8A04", display: "inline-block" }}></span>
+              Numéro MTN / Moov MoMo (optionnel)
+            </label>
+            <div className="input-wrapper">
+              <CreditCard className="input-icon" size={18} />
+              <input
+                id="business-momo"
+                type="text"
+                name="momoNumber"
+                className="input-with-icon"
+                value={formData.momoNumber}
+                onChange={handleChange}
+                placeholder="Ex : +229 97 00 00 00"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="business-instructions">Instructions de règlement</label>
+            <div className="input-wrapper">
+              <FileText className="input-icon" size={18} />
+              <input
+                id="business-instructions"
+                type="text"
+                name="paymentInstructions"
+                className="input-with-icon"
+                value={formData.paymentInstructions}
+                onChange={handleChange}
+                placeholder="Ex : Préciser le N° de facture en référence"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>
         <button type="submit" className="btn btn-primary">
           <Check size={18} />
           {submitLabel}

@@ -16,9 +16,7 @@ import {
   FileSpreadsheet,
   Printer,
 } from "lucide-react";
-import api from "../api/axiosConfig";
-
-const BACKEND_URL = "http://localhost:5001";
+import api, { BACKEND_URL } from "../api/axiosConfig";
 
 function DashboardPage() {
   const [user, setUser] = useState(null);
@@ -80,9 +78,18 @@ function DashboardPage() {
     if (!invoice.pdfUrl) return;
 
     const pdfLink = `${BACKEND_URL}${invoice.pdfUrl}`;
-    const whatsappMessage = `Bonjour ${invoice.customerName}, voici votre document ${
-      invoice.invoiceNumber
-    } d'un montant de ${formatAmount(invoice.total)}. Vous pouvez consulter le PDF ici : ${pdfLink}`;
+
+    const payParts = [];
+    if (businessProfile?.waveNumber) payParts.push(`• Wave : ${businessProfile.waveNumber}`);
+    if (businessProfile?.orangeMoneyNumber) payParts.push(`• Orange Money : ${businessProfile.orangeMoneyNumber}`);
+    if (businessProfile?.momoNumber) payParts.push(`• MoMo : ${businessProfile.momoNumber}`);
+    
+    const paySection = payParts.length > 0 
+      ? `\n\n💳 Modalités de règlement :\n${payParts.join("\n")}`
+      : "";
+
+    const docTypeLabel = invoice.type === "QUOTE" ? "devis" : "facture";
+    const whatsappMessage = `Bonjour ${invoice.customerName},\nVoici votre ${docTypeLabel} N° *${invoice.invoiceNumber}* d'un montant de *${formatAmount(invoice.total)}*.\n\n📄 Consulter / Télécharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
 
     const phone = formatPhoneForWhatsApp(invoice.customerPhone);
     const whatsappUrl = phone
@@ -343,12 +350,7 @@ function DashboardPage() {
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div className="avatar-initials">
-                          {inv.customerName ? inv.customerName.charAt(0).toUpperCase() : "C"}
-                        </div>
-                        <span style={{ fontWeight: 600 }}>{inv.customerName}</span>
-                      </div>
+                      <span style={{ fontWeight: 700, color: "var(--text-main)" }}>{inv.customerName}</span>
                     </td>
                     <td>{formatDate(inv.issuedAt || inv.createdAt)}</td>
                     <td>

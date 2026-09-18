@@ -1,12 +1,13 @@
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
+const QRCode = require("qrcode");
 const { getAccentColorFromLogo } = require("./brandColor.service");
 
-const TEXT_COLOR = "#0F172A";
-const MUTED_TEXT = "#64748B";
-const LIGHT_GRAY = "#F8FAFC";
-const BORDER_COLOR = "#E2E8F0";
+const TEXT_COLOR = "#1C1215";
+const MUTED_TEXT = "#695A60";
+const LIGHT_GRAY = "#FAF7F2";
+const BORDER_COLOR = "#E8DFD5";
 
 const formatAmount = (amount, currency = "FCFA") => {
   const value = Number(amount || 0);
@@ -25,6 +26,37 @@ const formatAmount = (amount, currency = "FCFA") => {
 const formatDate = (date) => {
   if (!date) return new Date().toLocaleDateString("fr-FR");
   return new Date(date).toLocaleDateString("fr-FR");
+};
+
+const generatePaymentQrCode = async ({ invoice, businessProfile }) => {
+  try {
+    let qrData = "";
+
+    // Si un lien direct Wave est renseigné
+    if (businessProfile?.waveNumber && businessProfile.waveNumber.startsWith("http")) {
+      qrData = businessProfile.waveNumber;
+    } else {
+      const payDetails = [];
+      if (businessProfile?.waveNumber) payDetails.push(`Wave:${businessProfile.waveNumber}`);
+      if (businessProfile?.orangeMoneyNumber) payDetails.push(`OM:${businessProfile.orangeMoneyNumber}`);
+      if (businessProfile?.momoNumber) payDetails.push(`MoMo:${businessProfile.momoNumber}`);
+
+      const payStr = payDetails.length > 0 ? payDetails.join(" | ") : `Tel:${businessProfile?.phone || ""}`;
+      qrData = `WariFact | Doc: ${invoice.invoiceNumber} | Montant: ${formatAmount(invoice.total, businessProfile?.currency || "FCFA")} | ${payStr}`;
+    }
+
+    return await QRCode.toBuffer(qrData, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: "#1C1215",
+        light: "#FFFFFF",
+      },
+    });
+  } catch (error) {
+    console.error("Erreur génération QR Code:", error);
+    return null;
+  }
 };
 
 const drawLogo = (doc, businessProfile, x, y) => {
@@ -202,8 +234,7 @@ const drawItemsTable = (doc, invoice, currency, accentColor, startY) => {
     const hasDesc = !!item.description;
     const rowHeight = hasDesc ? 30 : 22;
 
-    // Si on approche du bas de page et qu'il y a trop d'items, ajouter une page
-    if (y + rowHeight > 680) {
+    if (y + rowHeight > 660) {
       doc.addPage();
       y = 40;
       drawTableHeader(doc, y, accentColor);
@@ -265,52 +296,104 @@ const drawItemsTable = (doc, invoice, currency, accentColor, startY) => {
   return y + 14;
 };
 
-const drawTotalsAndNotes = (doc, invoice, currency, y, accentColor) => {
+const drawTotalsAndNotes = (doc, invoice, businessProfile, currency, y, accentColor, qrBuffer) => {
   let currentY = y;
 
-  // Si l'espace restant avant le bas est trop court pour le bloc de clôture (besoin d'environ 110 pt)
+  // Si l'espace restant est trop serré, passer à la page suivante
   if (currentY > 640) {
     doc.addPage();
     currentY = 40;
   }
 
-  // --- BLOC GAUCHE : NOTES & SIGNATURE ---
+  // --- BLOC GAUCHE : RÈGLEMENT, MOBILE MONEY & QR CODE ---
   const leftX = 40;
-  const leftWidth = 270;
+  const leftWidth = 275;
 
   doc
     .font("Helvetica-Bold")
     .fontSize(8.5)
     .fillColor(TEXT_COLOR)
-    .text("CONDITIONS / NOTES :", leftX, currentY);
+    .text("RÈGLEMENT & PAIEMENT :", leftX, currentY);
 
+  // Cadre des modalités
   doc
-    .rect(leftX, currentY + 12, leftWidth, 42)
+    .rect(leftX, currentY + 12, leftWidth, 108)
+    .fillColor("#FFFFFF")
+    .fill()
     .strokeColor(BORDER_COLOR)
     .lineWidth(0.5)
     .stroke();
 
+  // QR Code à gauche dans le cadre
+  if (qrBuffer) {
+    try {
+      doc.image(qrBuffer, leftX + 6, currentY + 18, {
+        fit: [65, 65],
+      });
+      doc
+        .font("Helvetica")
+        .fontSize(6.5)
+        .fillColor(MUTED_TEXT)
+        .text("Scanner pour payer", leftX + 6, currentY + 86, {
+          width: 65,
+          align: "center",
+        });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Informations Mobile Money à droite du QR code
+  const infoX = qrBuffer ? leftX + 78 : leftX + 10;
+  const infoW = leftWidth - (qrBuffer ? 86 : 20);
+  let payY = currentY + 18;
+
+  if (businessProfile?.waveNumber) {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor("#0284C7")
+      .text("• Wave : ", infoX, payY, { continued: true })
+      .font("Helvetica")
+      .fillColor(TEXT_COLOR)
+      .text(businessProfile.waveNumber);
+    payY += 13;
+  }
+
+  if (businessProfile?.orangeMoneyNumber) {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor("#EA580C")
+      .text("• Orange Money : ", infoX, payY, { continued: true })
+      .font("Helvetica")
+      .fillColor(TEXT_COLOR)
+      .text(businessProfile.orangeMoneyNumber);
+    payY += 13;
+  }
+
+  if (businessProfile?.momoNumber) {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor("#CA8A04")
+      .text("• MoMo : ", infoX, payY, { continued: true })
+      .font("Helvetica")
+      .fillColor(TEXT_COLOR)
+      .text(businessProfile.momoNumber);
+    payY += 13;
+  }
+
+  // Notes de la facture
+  const customNotes = invoice.notes || businessProfile?.paymentInstructions || "Paiement à réception. Merci pour votre confiance.";
   doc
     .font("Helvetica")
-    .fontSize(8)
+    .fontSize(7.5)
     .fillColor(MUTED_TEXT)
-    .text(invoice.notes || "Paiement à réception. Merci pour votre confiance.", leftX + 8, currentY + 18, {
-      width: leftWidth - 16,
-      height: 32,
+    .text(customNotes, infoX, payY, {
+      width: infoW,
+      height: 38,
     });
-
-  // Cadre signature
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(8)
-    .fillColor(MUTED_TEXT)
-    .text("Signature & Cachet :", leftX, currentY + 60);
-
-  doc
-    .rect(leftX, currentY + 72, leftWidth, 36)
-    .strokeColor(BORDER_COLOR)
-    .lineWidth(0.5)
-    .stroke();
 
   // --- BLOC DROIT : TOTAUX ---
   const rightX = 330;
@@ -320,7 +403,7 @@ const drawTotalsAndNotes = (doc, invoice, currency, y, accentColor) => {
   const valW = rightWidth - 112;
 
   doc
-    .rect(rightX, currentY, rightWidth, 108)
+    .rect(rightX, currentY + 12, rightWidth, 108)
     .fillColor("#FFFFFF")
     .fill()
     .strokeColor(BORDER_COLOR)
@@ -332,10 +415,10 @@ const drawTotalsAndNotes = (doc, invoice, currency, y, accentColor) => {
     .font("Helvetica")
     .fontSize(9)
     .fillColor(MUTED_TEXT)
-    .text("Sous-total HT :", labelX, currentY + 12)
+    .text("Sous-total HT :", labelX, currentY + 24)
     .font("Helvetica-Bold")
     .fillColor(TEXT_COLOR)
-    .text(formatAmount(invoice.subTotal, currency), valX, currentY + 12, {
+    .text(formatAmount(invoice.subTotal, currency), valX, currentY + 24, {
       width: valW,
       align: "right",
     });
@@ -345,24 +428,24 @@ const drawTotalsAndNotes = (doc, invoice, currency, y, accentColor) => {
     .font("Helvetica")
     .fontSize(9)
     .fillColor(MUTED_TEXT)
-    .text("TVA / Taxes :", labelX, currentY + 34)
+    .text("TVA / Taxes :", labelX, currentY + 46)
     .font("Helvetica-Bold")
     .fillColor(TEXT_COLOR)
-    .text(formatAmount(invoice.taxTotal, currency), valX, currentY + 34, {
+    .text(formatAmount(invoice.taxTotal, currency), valX, currentY + 46, {
       width: valW,
       align: "right",
     });
 
   // Ligne de séparation interne totaux
   doc
-    .moveTo(labelX, currentY + 54)
-    .lineTo(rightX + rightWidth - 12, currentY + 54)
+    .moveTo(labelX, currentY + 66)
+    .lineTo(rightX + rightWidth - 12, currentY + 66)
     .strokeColor(BORDER_COLOR)
     .stroke();
 
   // Fond bandeau Total TTC
   doc
-    .rect(rightX + 1, currentY + 62, rightWidth - 2, 45)
+    .rect(rightX + 1, currentY + 74, rightWidth - 2, 45)
     .fillColor(LIGHT_GRAY)
     .fill();
 
@@ -370,18 +453,18 @@ const drawTotalsAndNotes = (doc, invoice, currency, y, accentColor) => {
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(TEXT_COLOR)
-    .text("TOTAL TTC :", labelX, currentY + 76)
+    .text("TOTAL TTC :", labelX, currentY + 88)
     .font("Helvetica-Bold")
     .fontSize(12)
     .fillColor(accentColor)
-    .text(formatAmount(invoice.total, currency), valX, currentY + 75, {
+    .text(formatAmount(invoice.total, currency), valX, currentY + 87, {
       width: valW,
       align: "right",
     });
 };
 
 const drawFooter = (doc, businessProfile) => {
-  const footerY = 805; // Placé juste au-dessus du bas de la page A4 (841.89 pt) avec margin: 0
+  const footerY = 805;
 
   const companyInfo = [
     businessProfile?.businessName,
@@ -397,7 +480,7 @@ const drawFooter = (doc, businessProfile) => {
     .font("Helvetica")
     .fontSize(7.5)
     .fillColor(MUTED_TEXT)
-    .text(companyInfo || "Facture générée automatiquement", 40, footerY, {
+    .text(companyInfo || "Facture générée avec WariFact", 40, footerY, {
       width: 515,
       align: "center",
       lineBreak: false,
@@ -406,6 +489,7 @@ const drawFooter = (doc, businessProfile) => {
 
 const generateInvoicePdf = async ({ invoice, businessProfile }) => {
   const accentColor = await getAccentColorFromLogo(businessProfile?.logoUrl);
+  const qrBuffer = await generatePaymentQrCode({ invoice, businessProfile });
 
   return new Promise((resolve, reject) => {
     try {
@@ -439,7 +523,7 @@ const generateInvoicePdf = async ({ invoice, businessProfile }) => {
       const partiesEndY = drawParties(doc, invoice, businessProfile);
       const tableEndY = drawItemsTable(doc, invoice, currency, accentColor, partiesEndY);
 
-      drawTotalsAndNotes(doc, invoice, currency, tableEndY, accentColor);
+      drawTotalsAndNotes(doc, invoice, businessProfile, currency, tableEndY, accentColor, qrBuffer);
       drawFooter(doc, businessProfile);
 
       doc.end();

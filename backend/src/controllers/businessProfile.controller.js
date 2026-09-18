@@ -11,6 +11,10 @@ const createBusinessProfile = async (req, res) => {
       city,
       country,
       currency,
+      waveNumber,
+      orangeMoneyNumber,
+      momoNumber,
+      paymentInstructions,
     } = req.body;
 
     if (!businessName) {
@@ -40,6 +44,10 @@ const createBusinessProfile = async (req, res) => {
         city,
         country,
         currency: currency || "FCFA",
+        waveNumber: waveNumber || null,
+        orangeMoneyNumber: orangeMoneyNumber || null,
+        momoNumber: momoNumber || null,
+        paymentInstructions: paymentInstructions || null,
       },
     });
 
@@ -92,6 +100,10 @@ const updateBusinessProfile = async (req, res) => {
       country,
       currency,
       logoUrl,
+      waveNumber,
+      orangeMoneyNumber,
+      momoNumber,
+      paymentInstructions,
     } = req.body;
 
     const existingProfile = await prisma.businessProfile.findUnique({
@@ -118,6 +130,10 @@ const updateBusinessProfile = async (req, res) => {
         country,
         currency,
         logoUrl,
+        waveNumber: waveNumber !== undefined ? waveNumber : existingProfile.waveNumber,
+        orangeMoneyNumber: orangeMoneyNumber !== undefined ? orangeMoneyNumber : existingProfile.orangeMoneyNumber,
+        momoNumber: momoNumber !== undefined ? momoNumber : existingProfile.momoNumber,
+        paymentInstructions: paymentInstructions !== undefined ? paymentInstructions : existingProfile.paymentInstructions,
       },
     });
 

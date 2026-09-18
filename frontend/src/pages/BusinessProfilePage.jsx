@@ -12,12 +12,12 @@ import {
   Coins,
   Building,
   Globe,
+  QrCode,
+  CreditCard,
 } from "lucide-react";
-import api from "../api/axiosConfig";
+import api, { BACKEND_URL } from "../api/axiosConfig";
 import BusinessProfileForm from "../components/BusinessProfileForm";
 import Modal from "../components/Modal";
-
-const BACKEND_URL = "http://localhost:5001";
 
 function BusinessProfilePage() {
   const [businessProfile, setBusinessProfile] = useState(null);
@@ -251,6 +251,41 @@ function BusinessProfilePage() {
                   <span><strong>Devise par défaut :</strong> {businessProfile.currency}</span>
                 </div>
               </div>
+
+              {/* Bloc Mobile Money configuré */}
+              <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px dashed var(--border)" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--accent-gold-hover)", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                  <QrCode size={14} />
+                  Paiements Mobile Money
+                </span>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
+                  {businessProfile.waveNumber ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: "4px", background: "#E0F2FE", color: "#0369A1", fontWeight: 700, fontSize: "11px" }}>Wave</span>
+                      <span>{businessProfile.waveNumber}</span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "var(--text-light)" }}>• Wave : Non configuré</span>
+                  )}
+
+                  {businessProfile.orangeMoneyNumber ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: "4px", background: "#FFEDD5", color: "#C2410C", fontWeight: 700, fontSize: "11px" }}>Orange Money</span>
+                      <span>{businessProfile.orangeMoneyNumber}</span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "var(--text-light)" }}>• Orange Money : Non configuré</span>
+                  )}
+
+                  {businessProfile.momoNumber && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: "4px", background: "#FEF08A", color: "#854D0E", fontWeight: 700, fontSize: "11px" }}>MoMo</span>
+                      <span>{businessProfile.momoNumber}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Carte Upload Logo */}
@@ -324,7 +359,7 @@ function BusinessProfilePage() {
               </div>
 
               <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "20px" }}>
-                Voici une simulation visuelle de la disposition de vos factures et devis générés :
+                Voici une simulation visuelle de la disposition de vos factures et devis générés avec QR Code :
               </p>
 
               {/* Simulation facture */}
@@ -353,7 +388,7 @@ function BusinessProfilePage() {
                     )}
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <h3 style={{ fontSize: "22px", fontWeight: 800, margin: 0 }}>FACTURE</h3>
+                    <h3 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "var(--primary)" }}>FACTURE</h3>
                     <p style={{ fontSize: "11px", fontWeight: 700, color: "#4b5563" }}>FAC-2026-0001</p>
                     <p style={{ fontSize: "11px", color: "#6b7280" }}>Date : 02/09/2026</p>
                   </div>
@@ -383,19 +418,36 @@ function BusinessProfilePage() {
                 </div>
 
                 {/* Tableau simulation */}
-                <div style={{ marginTop: "24px", border: "1px solid #e5e7eb", borderRadius: "4px", overflow: "hidden" }}>
+                <div style={{ marginTop: "20px", border: "1px solid #e5e7eb", borderRadius: "4px", overflow: "hidden" }}>
                   <div style={{ background: "var(--primary)", color: "white", padding: "6px 10px", fontSize: "10px", display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
                     <span>Description</span>
                     <span>Montant ({businessProfile.currency})</span>
                   </div>
                   <div style={{ padding: "8px 10px", fontSize: "10px", display: "flex", justifyContent: "space-between", background: "#f9fafb" }}>
-                    <span>Exemple d'article ou prestation</span>
+                    <span>Prestation ou Article vendu</span>
                     <span>50 000 {businessProfile.currency}</span>
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right", marginTop: "12px", fontSize: "12px", fontWeight: 800 }}>
-                  TOTAL TTC : 50 000 {businessProfile.currency}
+                {/* Bloc Bas : QR Code + Totaux */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", gap: "12px", alignItems: "flex-start" }}>
+                  {/* Règlement & QR Code simulation */}
+                  <div style={{ flex: 1, padding: "10px", border: "1px solid #e2e8f0", borderRadius: "6px", display: "flex", gap: "10px", alignItems: "center" }}>
+                    <div style={{ width: "50px", height: "50px", background: "#f1f5f9", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <QrCode size={36} color="var(--primary)" />
+                    </div>
+                    <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <strong style={{ color: "var(--text-main)", display: "block", marginBottom: "2px" }}>Paiement Mobile :</strong>
+                      <div>Wave : {businessProfile.waveNumber || businessProfile.phone || "Non configuré"}</div>
+                      <div>OM : {businessProfile.orangeMoneyNumber || "Non configuré"}</div>
+                    </div>
+                  </div>
+
+                  {/* Totaux */}
+                  <div style={{ width: "160px", padding: "10px", background: "var(--primary-light)", border: "1px solid var(--primary-border)", borderRadius: "6px", textAlign: "right" }}>
+                    <span style={{ fontSize: "10px", color: "var(--text-muted)", display: "block" }}>TOTAL TTC</span>
+                    <strong style={{ fontSize: "15px", color: "var(--primary)" }}>50 000 {businessProfile.currency}</strong>
+                  </div>
                 </div>
               </div>
             </div>

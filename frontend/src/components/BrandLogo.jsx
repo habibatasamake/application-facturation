@@ -52,9 +52,9 @@ export function BrandLogo({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)",
-          border: "1.5px solid #e2e8f0",
-          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.08)",
+          background: "linear-gradient(145deg, #ffffff 0%, #FAF6EE 100%)",
+          border: "1.5px solid var(--accent-gold-border)",
+          boxShadow: "0 4px 14px rgba(197, 139, 43, 0.16)",
           padding: "4px",
           flexShrink: 0,
         }}

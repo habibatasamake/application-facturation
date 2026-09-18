@@ -15,10 +15,8 @@ import {
   FileSpreadsheet,
   Printer,
 } from "lucide-react";
-import api from "../api/axiosConfig";
+import api, { BACKEND_URL } from "../api/axiosConfig";
 import Modal from "../components/Modal";
-
-const BACKEND_URL = "http://localhost:5001";
 
 function CreateInvoicePage() {
   const [docType, setDocType] = useState("INVOICE");
@@ -53,6 +51,8 @@ function CreateInvoicePage() {
   const [createdInvoice, setCreatedInvoice] = useState(null);
   const [isCreateLoading, setIsCreateLoading] = useState(false);
 
+  const [businessProfile, setBusinessProfile] = useState(null);
+
   const formatAmount = (amount) => {
     return `${Number(amount || 0).toLocaleString("fr-FR")} ${currency}`;
   };
@@ -71,8 +71,11 @@ function CreateInvoicePage() {
       if (productsRes.status === "fulfilled") {
         setProducts(productsRes.value.data.products || []);
       }
-      if (profileRes.status === "fulfilled" && profileRes.value.data.businessProfile?.currency) {
-        setCurrency(profileRes.value.data.businessProfile.currency);
+      if (profileRes.status === "fulfilled" && profileRes.value.data.businessProfile) {
+        setBusinessProfile(profileRes.value.data.businessProfile);
+        if (profileRes.value.data.businessProfile.currency) {
+          setCurrency(profileRes.value.data.businessProfile.currency);
+        }
       }
     // eslint-disable-next-line no-unused-vars
     } catch (err) {
@@ -248,9 +251,18 @@ function CreateInvoicePage() {
     if (!createdInvoice) return;
 
     const pdfLink = `${BACKEND_URL}${createdInvoice.pdfUrl}`;
-    const whatsappMsg = `Bonjour ${createdInvoice.customerName}, voici votre document ${
-      createdInvoice.invoiceNumber
-    } d'un montant de ${formatAmount(createdInvoice.total)}. Vous pouvez consulter le PDF ici : ${pdfLink}`;
+
+    const payParts = [];
+    if (businessProfile?.waveNumber) payParts.push(`• Wave : ${businessProfile.waveNumber}`);
+    if (businessProfile?.orangeMoneyNumber) payParts.push(`• Orange Money : ${businessProfile.orangeMoneyNumber}`);
+    if (businessProfile?.momoNumber) payParts.push(`• MoMo : ${businessProfile.momoNumber}`);
+    
+    const paySection = payParts.length > 0 
+      ? `\n\n💳 Modalités de règlement :\n${payParts.join("\n")}`
+      : "";
+
+    const docTypeLabel = createdInvoice.type === "QUOTE" ? "devis" : "facture";
+    const whatsappMsg = `Bonjour ${createdInvoice.customerName},\nVoici votre ${docTypeLabel} N° *${createdInvoice.invoiceNumber}* d'un montant de *${formatAmount(createdInvoice.total)}*.\n\n📄 Consulter / Télécharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
 
     const phone = formatPhoneForWhatsApp(createdInvoice.customerPhone);
     const whatsappUrl = phone

@@ -23,6 +23,7 @@ import CreateInvoicePage from "./pages/CreateInvoicePage";
 import api from "./api/axiosConfig";
 
 import BrandLogo from "./components/BrandLogo";
+import PwaInstallPrompt from "./components/PwaInstallPrompt";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -140,6 +141,7 @@ function App() {
     <BrowserRouter>
       <div className="app-layout">
         <Navbar />
+        <PwaInstallPrompt />
 
         <main className="page-container">
           <Routes>

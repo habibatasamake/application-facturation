@@ -16,10 +16,8 @@ import {
   FileSpreadsheet,
   Printer,
 } from "lucide-react";
-import api from "../api/axiosConfig";
+import api, { BACKEND_URL } from "../api/axiosConfig";
 import Modal from "../components/Modal";
-
-const BACKEND_URL = "http://localhost:5001";
 
 function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -33,6 +31,8 @@ function InvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  const [businessProfile, setBusinessProfile] = useState(null);
 
   const formatAmount = (amount) => {
     return `${Number(amount || 0).toLocaleString("fr-FR")} ${currency}`;
@@ -63,8 +63,11 @@ function InvoicesPage() {
       if (invRes.status === "fulfilled") {
         setInvoices(invRes.value.data.invoices || []);
       }
-      if (profileRes.status === "fulfilled" && profileRes.value.data.businessProfile?.currency) {
-        setCurrency(profileRes.value.data.businessProfile.currency);
+      if (profileRes.status === "fulfilled" && profileRes.value.data.businessProfile) {
+        setBusinessProfile(profileRes.value.data.businessProfile);
+        if (profileRes.value.data.businessProfile.currency) {
+          setCurrency(profileRes.value.data.businessProfile.currency);
+        }
       }
     } catch (err) {
       setError(
@@ -95,9 +98,19 @@ function InvoicesPage() {
     }
 
     const pdfLink = `${BACKEND_URL}${invoice.pdfUrl}`;
-    const whatsappMessage = `Bonjour ${invoice.customerName}, voici votre document ${
-      invoice.invoiceNumber
-    } d'un montant de ${formatAmount(invoice.total)}. Vous pouvez consulter le PDF ici : ${pdfLink}`;
+    
+    // Coordonnées de paiement
+    const payParts = [];
+    if (businessProfile?.waveNumber) payParts.push(`• Wave : ${businessProfile.waveNumber}`);
+    if (businessProfile?.orangeMoneyNumber) payParts.push(`• Orange Money : ${businessProfile.orangeMoneyNumber}`);
+    if (businessProfile?.momoNumber) payParts.push(`• MoMo : ${businessProfile.momoNumber}`);
+    
+    const paySection = payParts.length > 0 
+      ? `\n\n💳 Modalités de règlement :\n${payParts.join("\n")}`
+      : "";
+
+    const docTypeLabel = invoice.type === "QUOTE" ? "devis" : "facture";
+    const whatsappMessage = `Bonjour ${invoice.customerName},\nVoici votre ${docTypeLabel} N° *${invoice.invoiceNumber}* d'un montant de *${formatAmount(invoice.total)}*.\n\n📄 Consulter / Télécharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
 
     const phone = formatPhoneForWhatsApp(invoice.customerPhone);
     const whatsappUrl = phone
@@ -371,18 +384,13 @@ function InvoicesPage() {
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <div className="avatar-initials">
-                          {inv.customerName ? inv.customerName.charAt(0).toUpperCase() : "C"}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{inv.customerName}</div>
-                          {inv.customerPhone && (
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                              {inv.customerPhone}
-                            </div>
-                          )}
-                        </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{inv.customerName}</div>
+                        {inv.customerPhone && (
+                          <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                            {inv.customerPhone}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td>

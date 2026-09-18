@@ -204,18 +204,13 @@ function CustomersPage() {
                 {filteredCustomers.map((customer) => (
                   <tr key={customer.id}>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <div className="avatar-initials">
-                          {customer.name ? customer.name.charAt(0).toUpperCase() : "C"}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{customer.name}</div>
-                          {customer.address && (
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                              {customer.address}
-                            </div>
-                          )}
-                        </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{customer.name}</div>
+                        {customer.address && (
+                          <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                            {customer.address}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td>
