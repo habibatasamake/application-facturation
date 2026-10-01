@@ -12,6 +12,7 @@ const customerRoutes = require("./routes/customer.routes");
 const productRoutes = require("./routes/product.routes");
 const invoiceRoutes = require("./routes/invoice.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const whatsappRoutes = require("./routes/whatsapp.routes");
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/whatsapp", whatsappRoutes);
 
 // Middleware global de capture et formatage des erreurs
 app.use(errorMiddleware);

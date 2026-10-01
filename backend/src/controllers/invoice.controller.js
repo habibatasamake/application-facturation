@@ -611,6 +611,8 @@ const convertQuoteToInvoice = async (req, res) => {
 };
 
 module.exports = {
+  buildInvoiceData,
+  generateInvoiceNumber,
   previewInvoice,
   createInvoice,
   getInvoices,

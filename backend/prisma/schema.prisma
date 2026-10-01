@@ -23,6 +23,7 @@ model User {
 
   invoices         Invoice[]
   invoiceSequences InvoiceSequence[]
+  whatsappSessions WhatsAppSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,4 +158,17 @@ model InvoiceSequence {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, type, year])
+}
+
+model WhatsAppSession {
+  id            String   @id @default(uuid())
+  phoneNumber   String   @unique
+  userId        String?
+  state         String   @default("IDLE") // IDLE, DRAFT_PENDING, AWAITING_CONFIRMATION
+  draftData     Json?
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

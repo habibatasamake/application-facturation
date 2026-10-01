@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
+  // eslint-disable-next-line no-unused-vars
   Receipt,
   LayoutDashboard,
   FileText,
@@ -23,7 +24,6 @@ import CreateInvoicePage from "./pages/CreateInvoicePage";
 import api from "./api/axiosConfig";
 
 import BrandLogo from "./components/BrandLogo";
-import PwaInstallPrompt from "./components/PwaInstallPrompt";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -141,7 +141,6 @@ function App() {
     <BrowserRouter>
       <div className="app-layout">
         <Navbar />
-        <PwaInstallPrompt />
 
         <main className="page-container">
           <Routes>
