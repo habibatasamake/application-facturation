@@ -135,12 +135,15 @@ function BusinessProfilePage() {
     <div>
       <div className="page-header">
         <div>
+          <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+            Paramètres d'entreprise
+          </span>
           <h1 className="page-title">
-            <Store size={28} color="var(--primary)" />
-            Profil & Identité Visuelle
+            <Store size={26} color="var(--primary)" />
+            Profil & Identité Commerciale
           </h1>
           <p className="page-subtitle">
-            Configurez les coordonnées de votre entreprise et personnalisez vos factures
+            Coordonnées légales, canaux de règlement Mobile Money et identité visuelle
           </p>
         </div>
 
@@ -173,7 +176,7 @@ function BusinessProfilePage() {
           />
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "28px" }}>
+        <div className="profile-layout-grid">
           {/* Colonne 1 : Fiche Entreprise & Logo */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Carte Coordonnées */}

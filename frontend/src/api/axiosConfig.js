@@ -1,9 +1,8 @@
 import axios from "axios";
 
 export const BACKEND_URL =
-  typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? `http://${window.location.hostname}:5001`
-    : "http://localhost:5001";
+  import.meta.env.VITE_BACKEND_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:5001");
 
 export const API_BASE_URL = `${BACKEND_URL}/api`;
 

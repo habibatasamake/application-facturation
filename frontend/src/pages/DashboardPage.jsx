@@ -15,6 +15,7 @@ import {
   CreditCard,
   FileSpreadsheet,
   Printer,
+  ArrowRightLeft,
 } from "lucide-react";
 import api, { BACKEND_URL } from "../api/axiosConfig";
 
@@ -85,11 +86,11 @@ function DashboardPage() {
     if (businessProfile?.momoNumber) payParts.push(`• MoMo : ${businessProfile.momoNumber}`);
     
     const paySection = payParts.length > 0 
-      ? `\n\n💳 Modalités de règlement :\n${payParts.join("\n")}`
+      ? `\n\nModalites de reglement :\n${payParts.join("\n")}`
       : "";
 
     const docTypeLabel = invoice.type === "QUOTE" ? "devis" : "facture";
-    const whatsappMessage = `Bonjour ${invoice.customerName},\nVoici votre ${docTypeLabel} N° *${invoice.invoiceNumber}* d'un montant de *${formatAmount(invoice.total)}*.\n\n📄 Consulter / Télécharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
+    const whatsappMessage = `Bonjour ${invoice.customerName},\nVoici votre ${docTypeLabel} N° *${invoice.invoiceNumber}* d'un montant de *${formatAmount(invoice.total)}*.\n\nConsulter / Telecharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
 
     const phone = formatPhoneForWhatsApp(invoice.customerPhone);
     const whatsappUrl = phone
@@ -135,6 +136,29 @@ function DashboardPage() {
     // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError("Erreur lors de la mise à jour du statut de paiement");
+    }
+  };
+
+  const handleConvertToInvoice = async (quote) => {
+    if (!window.confirm(`Voulez-vous convertir le devis "${quote.invoiceNumber}" en facture officielle ?`)) return;
+
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await api.post(`/invoices/${quote.id}/convert`);
+      const converted = response.data.invoice;
+
+      setRecentInvoices(
+        recentInvoices.map((item) => (item.id === quote.id ? converted : item))
+      );
+
+      const statsRes = await api.get("/dashboard/stats");
+      setStats(statsRes.data.stats);
+
+      setMessage(`Devis converti en Facture avec succès : ${converted.invoiceNumber}`);
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors de la conversion du devis");
     }
   };
 
@@ -363,6 +387,10 @@ function DashboardPage() {
                         <span className="badge badge-success">
                           <CheckCircle2 size={12} /> Payée
                         </span>
+                      ) : inv.status === "PARTIALLY_PAID" ? (
+                        <span className="badge badge-warning" title={`Acompte versé : ${formatAmount(inv.paidAmount || 0)}`}>
+                          <Clock size={12} /> Acompte
+                        </span>
                       ) : (
                         <span className="badge badge-warning">
                           <Clock size={12} /> En attente
@@ -380,7 +408,17 @@ function DashboardPage() {
                     </td>
                     <td style={{ textAlign: "right" }}>
                       <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                        {inv.type === "INVOICE" && (
+                        {inv.type === "QUOTE" ? (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleConvertToInvoice(inv)}
+                            title="Convertir ce devis en Facture en 1 clic"
+                          >
+                            <ArrowRightLeft size={13} />
+                            En Facture
+                          </button>
+                        ) : (
                           <button
                             type="button"
                             className={`btn btn-sm ${inv.status === "PAID" ? "btn-secondary" : "btn-success"}`}

@@ -245,3 +245,18 @@ Content-Type: application/json
 {
   "name": "Produit sans prix"
 }
+
+
+### ============================================================
+### 6. ASSISTANT VOCAL & IA WARIFACT
+### ============================================================
+
+### 6.1 Analyser une phrase en langage naturel (Français / Bambara)
+POST {{baseUrl}}/ai/parse-invoice
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "Fais une facture de 3 sacs de riz et 2 bidons d'huile pour Awa Traoré"
+}
+

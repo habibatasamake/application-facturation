@@ -45,6 +45,7 @@ RÈGLES IMPORTANTES :
 8. Si le boutiquier n'a pas précisé de prix unitaire pour un produit, laisse unitPrice à null (le système utilisera le prix du catalogue).
 9. Ne fais PAS de calcul mathématique complexe : fournis simplement les quantités et prix bruts.
 10. Rédige toujours un "friendlyMessage" court, poli et clair, prêt à être envoyé directement sur WhatsApp au commerçant.
+11. Extrais également l'unité si elle est précisée ou implicite (ex: "sac", "bidon", "kg", "carton", "paquet", "litre", "boîte", etc.), sinon renvoie "unité".
 
 TU DOIS OBLIGATOIREMENT RÉPONDRE AVEC UN OBJET JSON STRICT RESPECTANT CE FORMAT :
 {
@@ -57,7 +58,8 @@ TU DOIS OBLIGATOIREMENT RÉPONDRE AVEC UN OBJET JSON STRICT RESPECTANT CE FORMAT
     {
       "productName": "Nom de l'article",
       "quantity": 1,
-      "unitPrice": 5000 (ou null si non précisé)
+      "unitPrice": 5000 (ou null si non précisé),
+      "unit": "sac" (ou "kg", "bidon", "carton", "unité", etc.)
     }
   ],
   "discount": 0 (remise en FCFA, ou null),

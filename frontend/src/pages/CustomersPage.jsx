@@ -132,18 +132,21 @@ function CustomersPage() {
     <div>
       <div className="page-header">
         <div>
+          <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+            Base de données clients
+          </span>
           <h1 className="page-title">
-            <Users size={28} color="var(--primary)" />
+            <Users size={26} color="var(--primary)" />
             Gestion des Clients
           </h1>
           <p className="page-subtitle">
-            {customers.length} client{customers.length > 1 ? "s" : ""} enregistré{customers.length > 1 ? "s" : ""}
+            {customers.length} compte{customers.length > 1 ? "s" : ""} client{customers.length > 1 ? "s" : ""} enregistré{customers.length > 1 ? "s" : ""}
           </p>
         </div>
 
         <button className="btn btn-primary" onClick={handleOpenCreateModal}>
           <UserPlus size={18} />
-          Ajouter un client
+          Nouveau client
         </button>
       </div>
 

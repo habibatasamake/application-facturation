@@ -99,9 +99,10 @@ model Invoice {
   customerCity    String?
   customerCountry String?
 
-  subTotal Float @default(0)
-  taxTotal Float @default(0)
-  total    Float @default(0)
+  subTotal   Float @default(0)
+  taxTotal   Float @default(0)
+  total      Float @default(0)
+  paidAmount Float @default(0)
 
   notes String?
 

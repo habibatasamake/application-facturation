@@ -21,6 +21,7 @@ const getDashboardStats = async (req, res) => {
           customerName: true,
           customerPhone: true,
           total: true,
+          paidAmount: true,
           subTotal: true,
           taxTotal: true,
           shareStatus: true,
@@ -43,14 +44,14 @@ const getDashboardStats = async (req, res) => {
     const commercialInvoices = invoices.filter((inv) => inv.type === "INVOICE");
     const quotes = invoices.filter((inv) => inv.type === "QUOTE");
 
-    // Calculs de chiffre d'affaires
+    // Calculs de chiffre d'affaires tenant compte des acomptes et encaissements partiels
     const totalRevenue = commercialInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-    const paidRevenue = commercialInvoices
-      .filter((inv) => inv.status === "PAID")
-      .reduce((sum, inv) => sum + (inv.total || 0), 0);
-    const pendingRevenue = commercialInvoices
-      .filter((inv) => inv.status === "ISSUED" || !inv.status)
-      .reduce((sum, inv) => sum + (inv.total || 0), 0);
+    const paidRevenue = commercialInvoices.reduce((sum, inv) => {
+      if (inv.status === "PAID") return sum + (inv.total || 0);
+      if (inv.status === "PARTIALLY_PAID") return sum + (inv.paidAmount || 0);
+      return sum;
+    }, 0);
+    const pendingRevenue = Math.max(0, totalRevenue - paidRevenue);
     const quotesPotentialRevenue = quotes.reduce((sum, q) => sum + (q.total || 0), 0);
 
     const totalShared = invoices.filter((inv) => inv.shareStatus === "SHARED").length;

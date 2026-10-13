@@ -130,6 +130,43 @@ const drawHeader = (doc, invoice, businessProfile, accentColor) => {
       align: "right",
     });
 
+  // Badge d'état de règlement
+  if (invoice.status === "PAID") {
+    doc
+      .rect(455, 14, 100, 16)
+      .fillColor("#DCFCE7")
+      .fill()
+      .strokeColor("#86EFAC")
+      .lineWidth(0.8)
+      .stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(7.5)
+      .fillColor("#15803D")
+      .text("RÉGLÉE / PAYÉE", 455, 18, {
+        width: 100,
+        align: "center",
+      });
+  } else if (invoice.status === "PARTIALLY_PAID") {
+    doc
+      .rect(435, 14, 120, 16)
+      .fillColor("#FEF3C7")
+      .fill()
+      .strokeColor("#FCD34D")
+      .lineWidth(0.8)
+      .stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(7.5)
+      .fillColor("#B45309")
+      .text("ACOMPTE VERSÉ", 435, 18, {
+        width: 120,
+        align: "center",
+      });
+  }
+
   // Ligne de séparation
   doc
     .moveTo(40, 105)
@@ -402,8 +439,11 @@ const drawTotalsAndNotes = (doc, invoice, businessProfile, currency, y, accentCo
   const valX = rightX + 100;
   const valW = rightWidth - 112;
 
+  const hasPayment = invoice.paidAmount && Number(invoice.paidAmount) > 0;
+  const boxHeight = hasPayment ? 168 : 108;
+
   doc
-    .rect(rightX, currentY + 12, rightWidth, 108)
+    .rect(rightX, currentY + 12, rightWidth, boxHeight)
     .fillColor("#FFFFFF")
     .fill()
     .strokeColor(BORDER_COLOR)
@@ -415,10 +455,10 @@ const drawTotalsAndNotes = (doc, invoice, businessProfile, currency, y, accentCo
     .font("Helvetica")
     .fontSize(9)
     .fillColor(MUTED_TEXT)
-    .text("Sous-total HT :", labelX, currentY + 24)
+    .text("Sous-total HT :", labelX, currentY + 22)
     .font("Helvetica-Bold")
     .fillColor(TEXT_COLOR)
-    .text(formatAmount(invoice.subTotal, currency), valX, currentY + 24, {
+    .text(formatAmount(invoice.subTotal, currency), valX, currentY + 22, {
       width: valW,
       align: "right",
     });
@@ -428,39 +468,84 @@ const drawTotalsAndNotes = (doc, invoice, businessProfile, currency, y, accentCo
     .font("Helvetica")
     .fontSize(9)
     .fillColor(MUTED_TEXT)
-    .text("TVA / Taxes :", labelX, currentY + 46)
+    .text("TVA / Taxes :", labelX, currentY + 42)
     .font("Helvetica-Bold")
     .fillColor(TEXT_COLOR)
-    .text(formatAmount(invoice.taxTotal, currency), valX, currentY + 46, {
+    .text(formatAmount(invoice.taxTotal, currency), valX, currentY + 42, {
       width: valW,
       align: "right",
     });
 
   // Ligne de séparation interne totaux
   doc
-    .moveTo(labelX, currentY + 66)
-    .lineTo(rightX + rightWidth - 12, currentY + 66)
+    .moveTo(labelX, currentY + 60)
+    .lineTo(rightX + rightWidth - 12, currentY + 60)
     .strokeColor(BORDER_COLOR)
     .stroke();
 
   // Fond bandeau Total TTC
   doc
-    .rect(rightX + 1, currentY + 74, rightWidth - 2, 45)
+    .rect(rightX + 1, currentY + 66, rightWidth - 2, 42)
     .fillColor(LIGHT_GRAY)
     .fill();
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(11)
+    .fontSize(10)
     .fillColor(TEXT_COLOR)
-    .text("TOTAL TTC :", labelX, currentY + 88)
+    .text("TOTAL TTC :", labelX, currentY + 79)
     .font("Helvetica-Bold")
-    .fontSize(12)
+    .fontSize(11)
     .fillColor(accentColor)
-    .text(formatAmount(invoice.total, currency), valX, currentY + 87, {
+    .text(formatAmount(invoice.total, currency), valX, currentY + 78, {
       width: valW,
       align: "right",
     });
+
+  if (hasPayment) {
+    const paid = Number(invoice.paidAmount);
+    const balanceDue = Math.max(0, Number(invoice.total) - paid);
+
+    // Montant réglé (Acompte)
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#166534")
+      .text("Acompte réglé :", labelX, currentY + 118)
+      .font("Helvetica-Bold")
+      .fillColor("#166534")
+      .text(`- ${formatAmount(paid, currency)}`, valX, currentY + 118, {
+        width: valW,
+        align: "right",
+      });
+
+    // Ligne séparation acompte
+    doc
+      .moveTo(labelX, currentY + 135)
+      .lineTo(rightX + rightWidth - 12, currentY + 135)
+      .strokeColor(BORDER_COLOR)
+      .stroke();
+
+    // Reste à payer / Solde
+    const isSettled = balanceDue <= 0;
+    doc
+      .rect(rightX + 1, currentY + 140, rightWidth - 2, 38)
+      .fillColor(isSettled ? "#F0FDF4" : "#FEF3C7")
+      .fill();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9.5)
+      .fillColor(isSettled ? "#166534" : "#9A3412")
+      .text(isSettled ? "SOLDE :" : "RESTE À PAYER :", labelX, currentY + 152)
+      .font("Helvetica-Bold")
+      .fontSize(10.5)
+      .fillColor(isSettled ? "#166534" : "#B45309")
+      .text(isSettled ? "SOLDÉ (0 FCFA)" : formatAmount(balanceDue, currency), valX, currentY + 151, {
+        width: valW,
+        align: "right",
+      });
+  }
 };
 
 const drawFooter = (doc, businessProfile) => {

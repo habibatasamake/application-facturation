@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Module 3 : Automatisation & Orchestration IA (Make & n8n)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --primary: #4338ca;
+      --primary-light: #e0e7ff;
+      --make-purple: #6d28d9;
+      --n8n-orange: #ea580c;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --emerald-600: #059669;
+      --amber-600: #d97706;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--slate-800);
+      background-color: #ffffff;
+      line-height: 1.6;
+      font-size: 14px;
+      padding: 30px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        max-width: 100%;
+        font-size: 12px;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .avoid-break {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      @page {
+        size: A4;
+        margin: 15mm 15mm 15mm 15mm;
+      }
+    }
+
+    /* En-tête / Couverture */
+    .header-banner {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 36px 32px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(67, 56, 202, 0.25);
+    }
+
+    .header-banner::after {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(234, 88, 12, 0.3) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+    }
+
+    .curriculum-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .header-subtitle {
+      font-size: 15px;
+      color: #cbd5e1;
+      max-width: 680px;
+      margin-bottom: 20px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 16px;
+    }
+
+    .meta-item {
+      font-size: 12px;
+    }
+
+    .meta-label {
+      color: #94a3b8;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    /* Barre d'impression */
+    .print-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      color: #1e40af;
+      font-weight: 500;
+    }
+
+    .btn-print {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    .btn-print:hover {
+      background: #1d4ed8;
+    }
+
+    /* Typographie des titres */
+    h2.section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-top: 36px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    h3.sub-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin-top: 22px;
+      margin-bottom: 10px;
+    }
+
+    /* Badges & Cartes */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-make { background: #ede9fe; color: var(--make-purple); border: 1px solid #ddd6fe; }
+    .badge-n8n { background: #ffedd5; color: var(--n8n-orange); border: 1px solid #fed7aa; }
+    .badge-time { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+
+    .card {
+      background: var(--slate-50);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .curriculum-flow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .flow-step {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      position: relative;
+    }
+
+    .flow-step.active {
+      border: 2px solid var(--primary);
+      background: #f5f3ff;
+    }
+
+    .flow-num {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+    }
+
+    .flow-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin: 4px 0;
+    }
+
+    .flow-desc {
+      font-size: 11.5px;
+      color: var(--slate-600);
+      line-height: 1.4;
+    }
+
+    /* Tableaux */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 12.5px;
+    }
+
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background-color: var(--slate-100);
+      font-weight: 700;
+      color: var(--slate-800);
+    }
+
+    tr:hover {
+      background-color: var(--slate-50);
+    }
+
+    /* Schémas & Blocs de code */
+    .workflow-diagram {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 18px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin: 14px 0;
+      border: 1px solid #1e293b;
+    }
+
+    pre code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+    }
+
+    .code-box {
+      background: #1e293b;
+      color: #f1f5f9;
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin: 10px 0;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.45;
+      border-left: 4px solid var(--primary);
+    }
+
+    /* Encadrés d'alerte */
+    .callout {
+      border-left: 4px solid;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+      font-size: 12.5px;
+    }
+
+    .callout-info {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #1e3a8a;
+    }
+
+    .callout-warning {
+      background: #fffbeb;
+      border-color: #f59e0b;
+      color: #78350f;
+    }
+
+    .callout-success {
+      background: #ecfdf5;
+      border-color: #10b981;
+      color: #064e3b;
+    }
+
+    /* Étapes TP */
+    .step-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .step-badge {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-header {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: var(--slate-900);
+      margin-bottom: 4px;
+    }
+
+    /* QCM */
+    .quiz-box {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+
+    .quiz-q {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: var(--slate-900);
+    }
+
+    .quiz-opt {
+      font-size: 12px;
+      margin-left: 14px;
+      color: var(--slate-700);
+      margin-bottom: 3px;
+    }
+
+    .quiz-opt.correct {
+      color: var(--emerald-600);
+      font-weight: 600;
+    }
+
+    /* Pied de page */
+    .doc-footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 11px;
+      color: var(--slate-600);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barre d'action impression (masquée à l'impression) -->
+  <div class="print-bar no-print">
+    <div>
+      📄 <strong>Support de cours prêt à l'impression :</strong> Vous pouvez imprimer cette ressource au format PDF directement depuis votre navigateur (Format A4, disposition optimisée).
+    </div>
+    <button class="btn-print" onclick="window.print()">Imprimer en PDF</button>
+  </div>
+
+  <!-- En-tête / Couverture du cours -->
+  <div class="header-banner">
+    <div class="curriculum-tag">Parcours Intelligence Artificielle Générative • Module 3</div>
+    <h1 class="header-title">Automatisation & Orchestration avec l'IA : Make & n8n</h1>
+    <p class="header-subtitle">
+      Guide pédagogique complet et travaux pratiques guidés (2 heures) pour passer de la simple invite conversationnelle à la création de flux de travail intelligents et d'agents autonomes connectés.
+    </p>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">Format de la séance</div>
+        <div class="meta-value">2 Heures (120 min)</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Pédagogie</div>
+        <div class="meta-value">Pratique intensive (70%)</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Outils étudiés</div>
+        <div class="meta-value">Make & n8n</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Niveau requis</div>
+        <div class="meta-value">Intermédiaire / Tous profils</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Le parcours complet -->
+  <div class="avoid-break">
+    <h2 class="section-title">🧭 Continuité Pédagogique du Cycle IA</h2>
+    <div class="curriculum-flow">
+      <div class="flow-step">
+        <div class="flow-num">Module 1 (Fondations)</div>
+        <div class="flow-title">ChatGPT, Gemini & Perplexity</div>
+        <div class="flow-desc">Recherche augmentée, dialogue et synthèse d'informations. L'humain formule chaque prompt manuellement.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">Module 2 (Création Visuelle)</div>
+        <div class="flow-title">Lovable & Gamma</div>
+        <div class="flow-desc">Génération rapide d'applications web interactives et de présentations. L'IA produit des artefacts complets.</div>
+      </div>
+      <div class="flow-step active">
+        <div class="flow-num" style="color: var(--make-purple);">Module 3 (Cette Séance)</div>
+        <div class="flow-title">Make & n8n (Orchestration)</div>
+        <div class="flow-desc">L'IA travaille en arrière-plan de manière autonome, déclenchée par des événements et connectée à des outils réels.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planning minuté -->
+  <div class="avoid-break">
+    <h2 class="section-title">⏱️ Déroulé Pédagogique Minuté (120 Minutes)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 140px;">Timing</th>
+          <th>Séquence</th>
+          <th>Objectif Clé</th>
+          <th>Méthode</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>00h00 - 00h15</strong> (15 min)</td>
+          <td><strong>Cadrage & Démystification</strong></td>
+          <td>Comprendre l'orchestration, les triggers, JSON et le match Make vs n8n</td>
+          <td>Présentation magistrale interactive & démo</td>
+        </tr>
+        <tr>
+          <td><strong>00h15 - 00h55</strong> (40 min)</td>
+          <td><strong>TP 1 : Pratique sur Make</strong></td>
+          <td>Créer un scénario de veille automatique avec qualification par LLM et filtrage</td>
+          <td>Travaux pratiques individuels guidés pas-à-pas</td>
+        </tr>
+        <tr>
+          <td><strong>00h55 - 01h05</strong> (10 min)</td>
+          <td><strong>Pause & Débriefing</strong></td>
+          <td>Analyse des limites de Make, pièges des opérations et transition vers n8n</td>
+          <td>Échange collectif et questions / réponses</td>
+        </tr>
+        <tr>
+          <td><strong>01h05 - 01h45</strong> (40 min)</td>
+          <td><strong>TP 2 : Pratique sur n8n</strong></td>
+          <td>Bâtir un Agent IA autonome avec mémoire et outil de calcul (AI Agent Node)</td>
+          <td>Travaux pratiques individuels & observation de l'agent</td>
+        </tr>
+        <tr>
+          <td><strong>01h45 - 02h00</strong> (15 min)</td>
+          <td><strong>Synthèse & Mini-Défi</strong></td>
+          <td>Règles de sécurité, maîtrise des coûts tokens et validation des acquis</td>
+          <td>Quiz QCM 5 questions & défi extension</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Partie 1 : Théorie -->
+  <div class="avoid-break">
+    <h2 class="section-title">📚 Partie 1 : Les Fondamentaux de l'Orchestration IA</h2>
+    
+    <h3 class="sub-title">1.1 Pourquoi orchestrer l'Intelligence Artificielle ?</h3>
+    <p>
+      Jusqu'à présent, l'utilisation de l'IA reposait sur un échange unitaire : un humain pose une question, le modèle répond. 
+      Cependant, dans un contexte d'entreprise moderne, <strong>95% des données à valeur ajoutée proviennent d'événements automatisés</strong> : 
+      la réception d'une facture, l'arrivée d'un nouveau prospect dans un CRM, un avis négatif publié en ligne, ou une actualité stratégique.
+    </p>
+    <p style="margin-top: 8px;">
+      Un <strong>orchestrateur d'automatisation</strong> (comme Make ou n8n) fait le pont entre le monde réel et le cerveau de l'IA. Il écoute en continu les événements, extrait les informations pertinentes, consulte le modèle linguistique approprié, puis applique des règles d'action concrètes.
+    </p>
+
+    <h3 class="sub-title">1.2 Les 4 piliers d'un workflow intelligent</h3>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 10px;">
+      <div class="card">
+        <strong>1. Le Déclencheur (Trigger)</strong><br>
+        <span style="font-size: 12px; color: var(--slate-600);">
+          Le point de départ du flux. Soit par <em>Polling</em> (interrogation régulière toutes les X minutes), soit par <em>Webhook</em> (signal instantané envoyé par une application tierce).
+        </span>
+      </div>
+      <div class="card">
+        <strong>2. Le Conteneur de Données (JSON)</strong><br>
+        <span style="font-size: 12px; color: var(--slate-600);">
+          La structure clé/valeur universelle comprise par toutes les API modernes, permettant de nommer chaque information reçue.
+        </span>
+      </div>
+      <div class="card">
+        <strong>3. Le Connecteur LLM (Module IA)</strong><br>
+        <span style="font-size: 12px; color: var(--slate-600);">
+          L'appel API vers OpenAI (GPT-4o), Google (Gemini) ou Anthropic (Claude). On lui injecte un Prompt Système strict et des variables dynamiques.
+        </span>
+      </div>
+      <div class="card">
+        <strong>4. Le Routage Conditionnel (Filters)</strong><br>
+        <span style="font-size: 12px; color: var(--slate-600);">
+          L'aiguillage du flux selon l'analyse de l'IA (ex: si note d'urgence &gt; 8 &rarr; envoi de SMS ; sinon archivage discret dans une base).
+        </span>
+      </div>
+    </div>
+
+    <h3 class="sub-title">1.3 Make vs n8n : Tableau Comparatif</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Fonctionnalité</th>
+          <th><span class="badge badge-make">Make</span></th>
+          <th><span class="badge badge-n8n">n8n</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Accessibilité</strong></td>
+          <td>100% No-code, très visuel et intuitif</td>
+          <td>Hybride No-code / Code (JavaScript & Python)</td>
+        </tr>
+        <tr>
+          <td><strong>Hébergement</strong></td>
+          <td>Cloud uniquement (serveurs Make)</td>
+          <td>Cloud OU Auto-hébergé (Docker / Serveur dédié)</td>
+        </tr>
+        <tr>
+          <td><strong>Architecture IA</strong></td>
+          <td>Appels séquentiels aux LLM</td>
+          <td><strong>Nœud natif "AI Agent"</strong> (LangChain, Outils autonomes)</td>
+        </tr>
+        <tr>
+          <td><strong>Confidentialité (RGPD)</strong></td>
+          <td>Données transitant par les serveurs Make</td>
+          <td>Contrôle total sur vos serveurs internes</td>
+        </tr>
+        <tr>
+          <td><strong>Modèle de Facturation</strong></td>
+          <td>Au nombre d'opérations exécutées</td>
+          <td>Au nombre de flux lancés (Cloud) ou Gratuit (Self-host)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Partie 2 : TP 1 Make -->
+  <div class="avoid-break">
+    <h2 class="section-title">
+      <span class="badge badge-make">TP 1</span> 
+      Make en Pratique : L'Assistant Automatique de Veille & Qualification (40 min)
+    </h2>
+
+    <p>
+      <strong>Scénario professionnel :</strong> Votre organisation reçoit en continu des flux d'actualités technologiques. Vous allez concevoir un scénario Make qui lit chaque nouvel élément, charge un modèle de langage (OpenAI ou Gemini) de rédiger une synthèse et d'évaluer la criticité (score de 1 à 10), puis envoie une alerte prioritaire uniquement si le score est supérieur ou égal à 7.
+    </p>
+
+    <div class="workflow-diagram">
+[Flux RSS / Webhook] ──▶ [OpenAI / Gemini LLM] ──▶ [Module JSON Parse] ──▶ [Router]
+                                                                              ├── (Score >= 7) ──▶ [Email / Slack / Discord]
+                                                                              └── (Score < 7)  ──▶ [Google Sheets / Archivage]
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">1</div>
+      <div class="step-content">
+        <div class="step-header">Initialisation du scénario et Déclencheur RSS</div>
+        <p>Connectez-vous sur <code>make.com</code>, créez un nouveau scénario et ajoutez le module <strong>RSS &gt; Watch RSS feed items</strong>.</p>
+        <p style="color: var(--slate-600); font-size: 12px; margin-top: 4px;">
+          Entrez l'URL d'un flux d'actualités tech : <code>https://techcrunch.com/feed/</code> et fixez la limite à <strong>1 article</strong>. Faites un clic droit sur le module &gt; <em>"Run this module only"</em> pour charger les premières variables dans Make.
+        </p>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">2</div>
+      <div class="step-content">
+        <div class="step-header">Connexion et Configuration du Module IA (OpenAI / Gemini)</div>
+        <p>Ajoutez le module <strong>OpenAI &gt; Create a Chat Completion</strong> (ou module Gemini). Sélectionnez le modèle <code>gpt-4o-mini</code> ou <code>gemini-1.5-flash</code>.</p>
+        <div class="code-box">
+<strong>Prompt Système (à coller dans System Role) :</strong>
+Tu es un analyste de veille stratégique. Pour chaque article soumis, analyse le contenu et renvoie UNIQUEMENT un objet JSON strictement valide au format suivant, sans texte introductif :
+{
+  "titre_court": "Titre percutant en 5 mots",
+  "resume_executif": "Synthèse claire en 2 phrases",
+  "score_pertinence": (Entier entre 1 et 10),
+  "thematique": "IA, Sécurité ou Business",
+  "action_recommandee": "Action concrète à entreprendre"
+}
+
+<strong>Prompt Utilisateur (User Message) :</strong>
+Titre : {{1.title}}
+Contenu : {{1.description}}
+        </div>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">3</div>
+      <div class="step-content">
+        <div class="step-header">Conversion de la réponse avec le module "Parse JSON"</div>
+        <p>L'IA renvoie du texte brut. Pour transformer ce texte en véritables variables cliquables, ajoutez le module <strong>JSON &gt; Parse JSON</strong>.</p>
+        <p style="color: var(--slate-600); font-size: 12px; margin-top: 4px;">
+          Dans le champ <em>JSON String</em>, glissez la variable de réponse de l'IA : <code>{{2.choices[].message.content}}</code>.
+        </p>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">4</div>
+      <div class="step-content">
+        <div class="step-header">Routage Conditionnel & Filtrage Intelligent</div>
+        <p>Ajoutez un <strong>Router</strong>. Créez deux chemins distincts :</p>
+        <ul style="margin-left: 20px; font-size: 12px; margin-top: 4px;">
+          <li><strong>Branche 1 (Alerte Immédiate) :</strong> Module Email, Slack ou Discord. Cliquez sur la clé à molette entre le Router et ce module pour poser le filtre : <code>{{3.score_pertinence}} &gt;= 7</code>.</li>
+          <li><strong>Branche 2 (Archivage Passif) :</strong> Module Google Sheets ou Tools pour enregistrer les articles moins prioritaires (<code>{{3.score_pertinence}} &lt; 7</code>).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout callout-success">
+      💡 <strong>Astuce pédagogique :</strong> Faites exécuter le bouton <em>"Run once"</em> aux étudiants. Demandez-leur d'ouvrir la bulle d'inspection du module JSON pour vérifier comment Make a décomposé le score et le résumé en variables manipulables.
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Partie 3 : TP 2 n8n -->
+  <div class="avoid-break">
+    <h2 class="section-title">
+      <span class="badge badge-n8n">TP 2</span> 
+      n8n en Pratique : L'Agent IA Autonome avec Outils & Mémoire (40 min)
+    </h2>
+
+    <p>
+      <strong>Changement de paradigme :</strong> Contrairement à Make où nous avons fixé manuellement chaque embranchement (If/Else), dans n8n nous allons créer un <strong>Agent IA doté d'outils</strong>. L'agent va décider <em>lui-même</em> s'il doit utiliser un outil externe ou s'il sait répondre seul, tout en conservant la mémoire de la conversation !
+    </p>
+
+    <div class="workflow-diagram">
+      [Chat Trigger Node] (Interface Web de test)
+              │
+              ▼
+      ┌────────────────────────────────────────────────────────┐
+      │                   AI AGENT NODE                        │
+      │  (Agent autonome basé sur l'architecture LangChain)   │
+      └───────┬──────────────────────┬──────────────────┬──────┘
+              │                      │                  │
+        [Model Node]           [Memory Node]       [Tool Node]
+     (OpenAI / Gemini)      (Window Buffer)       (Calculator)
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">1</div>
+      <div class="step-content">
+        <div class="step-header">Créer le Déclencheur "When chat message received"</div>
+        <p>Dans un nouveau workflow n8n, ajoutez le déclencheur <strong>When chat message received</strong> (Chat Trigger). Ce nœud fournit directement une fenêtre de messagerie pour tester l'agent.</p>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">2</div>
+      <div class="step-content">
+        <div class="step-header">Ajouter le Nœud "AI Agent" (Tools Agent)</div>
+        <p>À la sortie du Chat Trigger, insérez le nœud <strong>AI Agent</strong> et choisissez le type <em>Tools Agent</em>. Remarquez les trois connecteurs inférieurs :</p>
+        <ul style="margin-left: 20px; font-size: 12px; margin-top: 4px;">
+          <li><strong>Model</strong> : Fournit la capacité de réflexion.</li>
+          <li><strong>Memory</strong> : Fournit la continuité conversationnelle.</li>
+          <li><strong>Tools</strong> : Fournit les capacités d'action dans le monde réel.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">3</div>
+      <div class="step-content">
+        <div class="step-header">Connecter le Modèle et la Mémoire Buffer</div>
+        <ul style="margin-left: 20px; font-size: 12px;">
+          <li>Sous le port <strong>Model</strong> : Branchez un nœud <strong>OpenAI Chat Model</strong> (ou <strong>Google Gemini Chat Model</strong>).</li>
+          <li>Sous le port <strong>Memory</strong> : Branchez un nœud <strong>Window Buffer Memory</strong> (configurez la taille de l'historique à <code>5</code> messages).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">4</div>
+      <div class="step-content">
+        <div class="step-header">Connecter l'Outil "Calculator" et Rédiger la Consigne Système</div>
+        <p>Sous le port <strong>Tool</strong>, connectez le nœud d'outil <strong>Calculator</strong>. Ouvrez ensuite le nœud AI Agent et définissez le System Message :</p>
+        <div class="code-box">
+Tu es l'assistant commercial d'une société informatique.
+Tu réponds toujours avec courtoisie en français.
+RÈGLE CRITIQUE : Pour tout calcul numérique, pourcentage, remise commerciale ou taxe, tu as l'interdiction de deviner le résultat. Tu dois OBLIGATOIREMENT invoquer ton outil "Calculator" pour obtenir un résultat exact au centime près.
+        </div>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-badge">5</div>
+      <div class="step-content">
+        <div class="step-header">Test en direct dans l'interface de Chat & Observation des Traces</div>
+        <p>Ouvrez l'onglet de chat de n8n et faites exécuter successivement ces 3 tests aux étudiants :</p>
+        <ul style="margin-left: 20px; font-size: 12px; margin-top: 4px;">
+          <li><strong>Test 1 (Dialogue normal) :</strong> <em>"Bonjour, que vends-tu comme services ?"</em> &rarr; L'agent répond sans utiliser l'outil.</li>
+          <li><strong>Test 2 (Raisonnement avec outil) :</strong> <em>"Un client achète 15 serveurs à 1 240 € HT. On applique 8% de remise puis 20% de TVA. Quel est le montant TTC final ?"</em> &rarr; Observez la séquence <code>Thought &rarr; Action: Calculator &rarr; Observation &rarr; Final Answer</code> !</li>
+          <li><strong>Test 3 (Persistance mémoire) :</strong> <em>"Quel était le prix unitaire du serveur mentionné juste avant ?"</em> &rarr; L'agent retrouve la valeur grâce à son nœud mémoire.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Partie 4 : Règles d'Or & Quiz -->
+  <div class="avoid-break">
+    <h2 class="section-title">🛡️ Règles d'Or de Production & Sécurité (15 min)</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+      <div class="card" style="border-left: 4px solid #ef4444;">
+        <strong style="color: #b91c1c;">1. Jamais de clés d'API en dur</strong>
+        <p style="font-size: 12px; color: var(--slate-700); margin-top: 4px;">
+          Toujours déclarer les clés dans les gestionnaires sécurisés d'identifiants (<em>Credentials</em> n8n ou <em>Connections</em> Make).
+        </p>
+      </div>
+      <div class="card" style="border-left: 4px solid #f59e0b;">
+        <strong style="color: #b45309;">2. Le danger des boucles infinies</strong>
+        <p style="font-size: 12px; color: var(--slate-700); margin-top: 4px;">
+          Si un flux répond automatiquement à un email, il risque de boucler avec les répondeurs automatiques. Ajoutez toujours un filtre anti-boucle.
+        </p>
+      </div>
+      <div class="card" style="border-left: 4px solid #3b82f6;">
+        <strong style="color: #1d4ed8;">3. Optimisation des Tokens</strong>
+        <p style="font-size: 12px; color: var(--slate-700); margin-top: 4px;">
+          Ne pas transmettre un email complet avec signatures et mentions légales au LLM. Prétraitez le texte pour ne garder que le message utile.
+        </p>
+      </div>
+      <div class="card" style="border-left: 4px solid #10b981;">
+        <strong style="color: #047857;">4. Human-in-the-Loop</strong>
+        <p style="font-size: 12px; color: var(--slate-700); margin-top: 4px;">
+          Pour les actions sensibles (paiement, envoi client officiel), l'IA prépare le brouillon et un humain valide via un bouton d'approbation.
+        </p>
+      </div>
+    </div>
+
+    <h2 class="section-title" style="margin-top: 24px;">🧠 Quiz d'Évaluation Rapide (5 Questions)</h2>
+
+    <div class="quiz-box">
+      <div class="quiz-q">1. Dans une automatisation, quelle est la spécificité d'un Webhook par rapport au Polling ?</div>
+      <div class="quiz-opt">a) Le webhook coûte plus cher en calcul serveur.</div>
+      <div class="quiz-opt correct">b) Le webhook transmet la donnée instantanément dès que l'événement a lieu (temps réel). &#10004;</div>
+      <div class="quiz-opt">c) Le webhook ne sait pas transporter de JSON.</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-q">2. Pourquoi utilise-t-on le module "Parse JSON" dans Make après l'appel à l'IA ?</div>
+      <div class="quiz-opt">a) Pour traduire le résultat en français.</div>
+      <div class="quiz-opt correct">b) Pour transformer le bloc de texte brut du LLM en variables structurées utilisables dans les filtres. &#10004;</div>
+      <div class="quiz-opt">c) Pour crypter la réponse de l'IA.</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-q">3. Qu'est-ce qui distingue le nœud "AI Agent" de n8n d'un module d'IA classique ?</div>
+      <div class="quiz-opt">a) Il est gratuit et ne nécessite aucune clé d'API.</div>
+      <div class="quiz-opt correct">b) Il utilise un raisonnement autonome pour décider s'il doit invoquer un outil connecté ou répondre directement. &#10004;</div>
+      <div class="quiz-opt">c) Il ne fonctionne qu'avec des fichiers PDF.</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-q">4. Pourquoi confier le calcul mathématique à l'outil "Calculator" plutôt qu'au LLM seul ?</div>
+      <div class="quiz-opt">a) Les LLMs ont tendance à faire des erreurs sur les calculs précis et les arrondis financiers. &#10004;</div>
+      <div class="quiz-opt">b) L'outil Calculator utilise moins de mémoire RAM.</div>
+      <div class="quiz-opt">c) Le LLM refuse systématiquement de manipuler des chiffres.</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-q">5. Si une banque exige que ses données sensibles ne sortent jamais de son réseau local, quelle solution adopter ?</div>
+      <div class="quiz-opt">a) Make.com avec un abonnement Pro.</div>
+      <div class="quiz-opt correct">b) n8n auto-hébergé sur ses propres serveurs (On-premise / Docker) avec un modèle local (Ollama). &#10004;</div>
+      <div class="quiz-opt">c) Zapier en mode Cloud.</div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    Cycle Formation Intelligence Artificielle Générative • Module 3 : Make & n8n • Document Pédagogique Étudiant & Enseignant
+  </div>
+
+</body>
+</html>

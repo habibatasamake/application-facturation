@@ -14,9 +14,12 @@ import {
   Coins,
   FileSpreadsheet,
   Printer,
+  Phone,
+  MapPin,
 } from "lucide-react";
 import api, { BACKEND_URL } from "../api/axiosConfig";
 import Modal from "../components/Modal";
+import AiInvoiceAssistant from "../components/AiInvoiceAssistant";
 
 function CreateInvoicePage() {
   const [docType, setDocType] = useState("INVOICE");
@@ -163,15 +166,52 @@ function CreateInvoicePage() {
     setQuantity(1);
   };
 
-  const handleRemoveItem = (productId) => {
-    setInvoiceItems(invoiceItems.filter((i) => i.productId !== productId));
+  const handleRemoveItem = (index) => {
+    setInvoiceItems(invoiceItems.filter((_, i) => i !== index));
+  };
+
+  const handleAiInvoiceParsed = (aiData) => {
+    setError("");
+    setMessage("");
+
+    // 1. Client
+    if (aiData.customer) {
+      if (aiData.isExistingCustomer && aiData.customer.id) {
+        setCustomerMode("EXISTING");
+        setSelectedCustomerId(aiData.customer.id);
+      } else if (aiData.customer.name) {
+        setCustomerMode("NEW");
+        setTemporaryCustomer({
+          name: aiData.customer.name || "",
+          phone: aiData.customer.phone || "",
+          email: aiData.customer.email || "",
+          address: aiData.customer.address || "",
+          city: aiData.customer.city || "",
+          country: aiData.customer.country || "",
+        });
+      }
+    }
+
+    // 2. Articles
+    if (aiData.items && aiData.items.length > 0) {
+      setInvoiceItems(aiData.items);
+    }
+
+    // 3. Notes
+    if (aiData.notes) {
+      setNotes(aiData.notes);
+    }
   };
 
   const buildInvoicePayload = () => {
     const payload = {
       type: docType,
       items: invoiceItems.map((item) => ({
-        productId: item.productId,
+        productId: item.productId || null,
+        productName: item.productName,
+        unitPrice: item.unitPrice,
+        unit: item.unit || null,
+        taxRate: item.taxRate || 0,
         quantity: item.quantity,
       })),
       notes,
@@ -258,11 +298,11 @@ function CreateInvoicePage() {
     if (businessProfile?.momoNumber) payParts.push(`• MoMo : ${businessProfile.momoNumber}`);
     
     const paySection = payParts.length > 0 
-      ? `\n\n💳 Modalités de règlement :\n${payParts.join("\n")}`
+      ? `\n\nModalités de règlement :\n${payParts.join("\n")}`
       : "";
 
     const docTypeLabel = createdInvoice.type === "QUOTE" ? "devis" : "facture";
-    const whatsappMsg = `Bonjour ${createdInvoice.customerName},\nVoici votre ${docTypeLabel} N° *${createdInvoice.invoiceNumber}* d'un montant de *${formatAmount(createdInvoice.total)}*.\n\n📄 Consulter / Télécharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
+    const whatsappMsg = `Bonjour ${createdInvoice.customerName},\nVoici votre ${docTypeLabel} N° *${createdInvoice.invoiceNumber}* d'un montant de *${formatAmount(createdInvoice.total)}*.\n\nConsulter le document PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance.`;
 
     const phone = formatPhoneForWhatsApp(createdInvoice.customerPhone);
     const whatsappUrl = phone
@@ -443,6 +483,14 @@ function CreateInvoicePage() {
       {error && <div className="alert alert-error">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
 
+      {/* Assistant Vocal & IA WariFact */}
+      <AiInvoiceAssistant
+        onInvoiceParsed={handleAiInvoiceParsed}
+        products={products}
+        customers={customers}
+        onProductsUpdated={fetchData}
+      />
+
       <div className="invoice-creator-layout">
         {/* Colonne gauche : Formulaire */}
         <div>
@@ -451,7 +499,7 @@ function CreateInvoicePage() {
             <div className="card-header">
               <h2 className="card-title">
                 <FileSpreadsheet size={18} color="var(--primary)" />
-                1. Type de document
+                01. Type de document
               </h2>
             </div>
             <div style={{ display: "flex", gap: "12px" }}>
@@ -479,7 +527,7 @@ function CreateInvoicePage() {
             <div className="card-header">
               <h2 className="card-title">
                 <User size={18} color="var(--primary)" />
-                2. Destinataire (Client)
+                02. Destinataire (Client)
               </h2>
             </div>
 
@@ -593,11 +641,11 @@ function CreateInvoicePage() {
             <div className="card-header">
               <h2 className="card-title">
                 <Package size={18} color="var(--primary)" />
-                3. Articles & Prestations
+                03. Articles & Prestations
               </h2>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 110px auto", gap: "12px", alignItems: "end", marginBottom: "20px" }}>
+            <div className="product-select-grid">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Sélectionner un article du catalogue</label>
                 <select
@@ -654,8 +702,8 @@ function CreateInvoicePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoiceItems.map((item) => (
-                      <tr key={item.productId}>
+                    {invoiceItems.map((item, index) => (
+                      <tr key={`${item.productId || "item"}-${index}`}>
                         <td>
                           <div style={{ fontWeight: 600 }}>{item.productName}</div>
                         </td>
@@ -671,7 +719,7 @@ function CreateInvoicePage() {
                           <button
                             type="button"
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleRemoveItem(item.productId)}
+                            onClick={() => handleRemoveItem(index)}
                             title="Supprimer cette ligne"
                           >
                             <Trash2 size={14} />
@@ -690,7 +738,7 @@ function CreateInvoicePage() {
             <div className="card-header">
               <h2 className="card-title">
                 <Coins size={18} color="var(--primary)" />
-                4. Conditions & Notes
+                04. Modalités & Notes
               </h2>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -720,8 +768,9 @@ function CreateInvoicePage() {
                 {selectedCustomerObj?.name || "Non sélectionné"}
               </div>
               {selectedCustomerObj?.phone && (
-                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  📞 {selectedCustomerObj.phone}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                  <Phone size={12} />
+                  <span>{selectedCustomerObj.phone}</span>
                 </div>
               )}
             </div>
@@ -782,8 +831,18 @@ function CreateInvoicePage() {
           <div>
             <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "var(--radius-md)", marginBottom: "20px" }}>
               <p><strong>Destinataire :</strong> {preview.customerName}</p>
-              {preview.customerPhone && <p style={{ fontSize: "13px" }}>📞 {preview.customerPhone}</p>}
-              {preview.customerAddress && <p style={{ fontSize: "13px" }}>📍 {preview.customerAddress}</p>}
+              {preview.customerPhone && (
+                <p style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                  <Phone size={12} color="var(--text-muted)" />
+                  <span>{preview.customerPhone}</span>
+                </p>
+              )}
+              {preview.customerAddress && (
+                <p style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                  <MapPin size={12} color="var(--text-muted)" />
+                  <span>{preview.customerAddress}</span>
+                </p>
+              )}
             </div>
 
             <div className="table-container" style={{ marginBottom: "20px" }}>

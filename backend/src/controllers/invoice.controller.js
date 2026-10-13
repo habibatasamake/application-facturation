@@ -368,6 +368,7 @@ const getInvoices = async (req, res) => {
         subTotal: true,
         taxTotal: true,
         total: true,
+        paidAmount: true,
         pdfUrl: true,
         shareStatus: true,
         issuedAt: true,
@@ -478,40 +479,99 @@ const updateInvoiceShareStatus = async (req, res) => {
 const updateInvoicePaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    let { status, paidAmount } = req.body;
 
     const allowedStatuses = ["ISSUED", "PAID", "PARTIALLY_PAID", "CANCELED"];
-
-    if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        message: "Statut de paiement invalide (valeurs possibles: ISSUED, PAID, PARTIALLY_PAID, CANCELED)",
-      });
-    }
 
     const existingInvoice = await prisma.invoice.findFirst({
       where: {
         id,
         userId: req.user.id,
       },
+      include: {
+        items: true,
+      },
     });
 
     if (!existingInvoice) {
       return res.status(404).json({
-        message: "Facture introuvable",
+        message: "Document introuvable",
       });
     }
 
-    const updatedInvoice = await prisma.invoice.update({
+    let computedPaidAmount = existingInvoice.paidAmount || 0;
+
+    // Calcul du montant payé et du statut
+    if (paidAmount !== undefined && paidAmount !== null && paidAmount !== "") {
+      const parsedAmount = Math.max(0, Number(paidAmount) || 0);
+      computedPaidAmount = Math.min(parsedAmount, existingInvoice.total);
+
+      if (computedPaidAmount >= existingInvoice.total && existingInvoice.total > 0) {
+        status = "PAID";
+      } else if (computedPaidAmount > 0) {
+        status = "PARTIALLY_PAID";
+      } else {
+        status = "ISSUED";
+      }
+    } else if (status) {
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Statut de paiement invalide (valeurs possibles: ISSUED, PAID, PARTIALLY_PAID, CANCELED)",
+        });
+      }
+
+      if (status === "PAID") {
+        computedPaidAmount = existingInvoice.total;
+      } else if (status === "ISSUED") {
+        computedPaidAmount = 0;
+      }
+    } else {
+      status = existingInvoice.status;
+    }
+
+    let updatedInvoice = await prisma.invoice.update({
       where: {
         id,
       },
       data: {
         status,
+        paidAmount: computedPaidAmount,
+      },
+      include: {
+        items: true,
       },
     });
 
+    // Régénérer le PDF pour afficher les montants réglés / solde restant à jour
+    try {
+      const businessProfile = await prisma.businessProfile.findUnique({
+        where: {
+          userId: req.user.id,
+        },
+      });
+
+      const { pdfUrl } = await generateInvoicePdf({
+        invoice: updatedInvoice,
+        businessProfile,
+      });
+
+      updatedInvoice = await prisma.invoice.update({
+        where: {
+          id,
+        },
+        data: {
+          pdfUrl,
+        },
+        include: {
+          items: true,
+        },
+      });
+    } catch (pdfErr) {
+      console.error("Erreur lors de la régénération du PDF suite au paiement :", pdfErr);
+    }
+
     return res.status(200).json({
-      message: `Statut mis à jour : ${status}`,
+      message: `Règlement enregistré (${status})`,
       invoice: updatedInvoice,
     });
   } catch (error) {

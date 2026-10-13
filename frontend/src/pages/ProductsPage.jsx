@@ -143,18 +143,21 @@ function ProductsPage() {
     <div>
       <div className="page-header">
         <div>
+          <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+            Catalogue & Tarifs
+          </span>
           <h1 className="page-title">
-            <Package size={28} color="var(--primary)" />
-            Catalogue Produits & Services
+            <Package size={26} color="var(--primary)" />
+            Articles & Prestations
           </h1>
           <p className="page-subtitle">
-            {products.length} article{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""}
+            {products.length} référence{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""} dans votre boutique
           </p>
         </div>
 
         <button className="btn btn-primary" onClick={handleOpenCreateModal}>
           <PlusCircle size={18} />
-          Ajouter un article
+          Ajouter une référence
         </button>
       </div>
 

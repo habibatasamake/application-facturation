@@ -15,6 +15,11 @@ import {
   // eslint-disable-next-line no-unused-vars
   FileSpreadsheet,
   Printer,
+  Phone,
+  Mail,
+  MapPin,
+  ArrowRightLeft,
+  Coins,
 } from "lucide-react";
 import api, { BACKEND_URL } from "../api/axiosConfig";
 import Modal from "../components/Modal";
@@ -31,6 +36,13 @@ function InvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Modal d'enregistrement de règlement / acompte
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentInvoice, setPaymentInvoice] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
   const [businessProfile, setBusinessProfile] = useState(null);
 
@@ -106,11 +118,11 @@ function InvoicesPage() {
     if (businessProfile?.momoNumber) payParts.push(`• MoMo : ${businessProfile.momoNumber}`);
     
     const paySection = payParts.length > 0 
-      ? `\n\n💳 Modalités de règlement :\n${payParts.join("\n")}`
+      ? `\n\nModalites de reglement :\n${payParts.join("\n")}`
       : "";
 
     const docTypeLabel = invoice.type === "QUOTE" ? "devis" : "facture";
-    const whatsappMessage = `Bonjour ${invoice.customerName},\nVoici votre ${docTypeLabel} N° *${invoice.invoiceNumber}* d'un montant de *${formatAmount(invoice.total)}*.\n\n📄 Consulter / Télécharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
+    const whatsappMessage = `Bonjour ${invoice.customerName},\nVoici votre ${docTypeLabel} N° *${invoice.invoiceNumber}* d'un montant de *${formatAmount(invoice.total)}*.\n\nConsulter / Telecharger le PDF : ${pdfLink}${paySection}\n\nMerci pour votre confiance !`;
 
     const phone = formatPhoneForWhatsApp(invoice.customerPhone);
     const whatsappUrl = phone
@@ -162,30 +174,80 @@ function InvoicesPage() {
     };
   };
 
-  const handleTogglePaymentStatus = async (invoice) => {
+  const handleOpenPaymentModal = (invoice) => {
     setMessage("");
     setError("");
-    const newStatus = invoice.status === "PAID" ? "ISSUED" : "PAID";
+    setPaymentInvoice(invoice);
+    const balance = Math.max(0, Number(invoice.total || 0) - Number(invoice.paidAmount || 0));
+    setPaymentAmount(balance > 0 ? balance : "");
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setIsPaymentModalOpen(false);
+    setPaymentInvoice(null);
+    setPaymentAmount("");
+  };
+
+  const handleSavePayment = async (e) => {
+    if (e) e.preventDefault();
+    if (!paymentInvoice) return;
+
+    const amountToAdd = Number(paymentAmount);
+    if (isNaN(amountToAdd) || amountToAdd <= 0) {
+      alert("Veuillez saisir un montant supérieur à 0");
+      return;
+    }
+
+    setPaymentSubmitting(true);
+    setError("");
 
     try {
-      const response = await api.patch(`/invoices/${invoice.id}/payment-status`, {
-        status: newStatus,
+      const currentPaid = Number(paymentInvoice.paidAmount || 0);
+      const newTotalPaid = Math.min(Number(paymentInvoice.total), currentPaid + amountToAdd);
+
+      const response = await api.patch(`/invoices/${paymentInvoice.id}/payment-status`, {
+        paidAmount: newTotalPaid,
       });
 
-      setInvoices(
-        invoices.map((item) =>
-          item.id === invoice.id ? response.data.invoice : item
-        )
-      );
+      const updated = response.data.invoice;
+      setInvoices(invoices.map((i) => (i.id === updated.id ? updated : i)));
 
-      if (selectedInvoice && selectedInvoice.id === invoice.id) {
-        setSelectedInvoice(response.data.invoice);
+      if (selectedInvoice && selectedInvoice.id === updated.id) {
+        setSelectedInvoice(updated);
       }
 
-      setMessage(`Statut de paiement de ${invoice.invoiceNumber} mis à jour (${newStatus === "PAID" ? "Payée" : "En attente"})`);
-    // eslint-disable-next-line no-unused-vars
+      setMessage(
+        `Règlement de ${formatAmount(amountToAdd)} enregistré pour ${updated.invoiceNumber} (${updated.status === "PAID" ? "Soldée" : "Acompte partiel enregistré"})`
+      );
+      handleClosePaymentModal();
     } catch (err) {
-      setError("Erreur lors de la mise à jour du statut de paiement");
+      setError(err.response?.data?.message || "Erreur lors de l'enregistrement du règlement");
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
+
+  const handleResetPayment = async (invoice) => {
+    if (!window.confirm(`Voulez-vous remettre les encaissements à 0 pour la facture ${invoice.invoiceNumber} ?`)) return;
+
+    setError("");
+    try {
+      const response = await api.patch(`/invoices/${invoice.id}/payment-status`, {
+        paidAmount: 0,
+      });
+
+      const updated = response.data.invoice;
+      setInvoices(invoices.map((i) => (i.id === updated.id ? updated : i)));
+
+      if (selectedInvoice && selectedInvoice.id === updated.id) {
+        setSelectedInvoice(updated);
+      }
+
+      setMessage(`Règlements réinitialisés pour la facture ${updated.invoiceNumber}`);
+      if (isPaymentModalOpen) handleClosePaymentModal();
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors de la réinitialisation");
     }
   };
 
@@ -248,7 +310,8 @@ function InvoicesPage() {
     if (filterTab === "INVOICE") matchesFilter = inv.type === "INVOICE";
     else if (filterTab === "QUOTE") matchesFilter = inv.type === "QUOTE";
     else if (filterTab === "PAID") matchesFilter = inv.type === "INVOICE" && inv.status === "PAID";
-    else if (filterTab === "PENDING") matchesFilter = inv.type === "INVOICE" && inv.status !== "PAID";
+    else if (filterTab === "PARTIALLY_PAID") matchesFilter = inv.type === "INVOICE" && inv.status === "PARTIALLY_PAID";
+    else if (filterTab === "PENDING") matchesFilter = inv.type === "INVOICE" && (inv.status === "ISSUED" || !inv.status);
 
     return matchesSearch && matchesFilter;
   });
@@ -319,10 +382,17 @@ function InvoicesPage() {
             </button>
             <button
               type="button"
+              className={`btn btn-sm ${filterTab === "PARTIALLY_PAID" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setFilterTab("PARTIALLY_PAID")}
+            >
+              Acomptes ({invoices.filter((i) => i.type === "INVOICE" && i.status === "PARTIALLY_PAID").length})
+            </button>
+            <button
+              type="button"
               className={`btn btn-sm ${filterTab === "PENDING" ? "btn-primary" : "btn-secondary"}`}
               onClick={() => setFilterTab("PENDING")}
             >
-              En attente ({invoices.filter((i) => i.type === "INVOICE" && i.status !== "PAID").length})
+              En attente ({invoices.filter((i) => i.type === "INVOICE" && (i.status === "ISSUED" || !i.status)).length})
             </button>
           </div>
         </div>
@@ -409,8 +479,12 @@ function InvoicesPage() {
                         <span className="badge badge-success">
                           <CheckCircle2 size={12} /> Payée
                         </span>
+                      ) : inv.status === "PARTIALLY_PAID" ? (
+                        <span className="badge badge-warning" title={`Acompte: ${formatAmount(inv.paidAmount)} - Reste: ${formatAmount(inv.total - inv.paidAmount)}`}>
+                          <Clock size={12} /> Acompte ({formatAmount(inv.paidAmount)})
+                        </span>
                       ) : (
-                        <span className="badge badge-warning">
+                        <span className="badge badge-gray">
                           <Clock size={12} /> En attente
                         </span>
                       )}
@@ -433,20 +507,20 @@ function InvoicesPage() {
                             type="button"
                             className="btn btn-primary btn-sm"
                             onClick={() => handleConvertToInvoice(inv)}
-                            title="Transformer ce devis en facture officielle"
+                            title="Transformer ce devis en facture commerciale en 1 clic"
                           >
-                            <RefreshCw size={13} />
+                            <ArrowRightLeft size={13} />
                             En Facture
                           </button>
                         ) : (
                           <button
                             type="button"
-                            className={`btn btn-sm ${inv.status === "PAID" ? "btn-secondary" : "btn-success"}`}
-                            onClick={() => handleTogglePaymentStatus(inv)}
-                            title={inv.status === "PAID" ? "Marquer comme en attente" : "Marquer comme payée"}
+                            className={`btn btn-sm ${inv.status === "PAID" ? "btn-secondary" : "btn-primary"}`}
+                            onClick={() => handleOpenPaymentModal(inv)}
+                            title={inv.status === "PAID" ? "Voir ou réinitialiser le règlement" : "Encaisser un acompte ou le solde"}
                           >
                             <CreditCard size={13} />
-                            {inv.status === "PAID" ? "Payée" : "Encaisser"}
+                            {inv.status === "PAID" ? "Soldée" : inv.status === "PARTIALLY_PAID" ? "Compléter" : "Encaisser"}
                           </button>
                         )}
 
@@ -518,9 +592,21 @@ function InvoicesPage() {
                   Client Destinataire
                 </span>
                 <h4 style={{ fontSize: "16px", fontWeight: 700 }}>{selectedInvoice.customerName}</h4>
-                {selectedInvoice.customerPhone && <p style={{ fontSize: "13px" }}>📞 {selectedInvoice.customerPhone}</p>}
-                {selectedInvoice.customerEmail && <p style={{ fontSize: "13px" }}>✉️ {selectedInvoice.customerEmail}</p>}
-                {selectedInvoice.customerAddress && <p style={{ fontSize: "13px" }}>📍 {selectedInvoice.customerAddress}</p>}
+                {selectedInvoice.customerPhone && (
+                  <p style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                    <Phone size={13} style={{ color: "var(--text-muted)" }} /> {selectedInvoice.customerPhone}
+                  </p>
+                )}
+                {selectedInvoice.customerEmail && (
+                  <p style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                    <Mail size={13} style={{ color: "var(--text-muted)" }} /> {selectedInvoice.customerEmail}
+                  </p>
+                )}
+                {selectedInvoice.customerAddress && (
+                  <p style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                    <MapPin size={13} style={{ color: "var(--text-muted)" }} /> {selectedInvoice.customerAddress}
+                  </p>
+                )}
               </div>
 
               <div style={{ textAlign: "right" }}>
@@ -575,9 +661,9 @@ function InvoicesPage() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <div style={{ width: "260px", background: "#f8fafc", padding: "16px", borderRadius: "var(--radius-md)" }}>
+              <div style={{ width: "280px", background: "#f8fafc", padding: "16px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
                 <div className="receipt-row">
-                  <span>Sous-total :</span>
+                  <span>Sous-total HT :</span>
                   <span>{formatAmount(selectedInvoice.subTotal)}</span>
                 </div>
                 <div className="receipt-row">
@@ -588,6 +674,18 @@ function InvoicesPage() {
                   <span>Total TTC :</span>
                   <span style={{ color: "var(--primary)" }}>{formatAmount(selectedInvoice.total)}</span>
                 </div>
+                {selectedInvoice.paidAmount > 0 && (
+                  <>
+                    <div className="receipt-row" style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed var(--border)", color: "#166534", fontWeight: 600 }}>
+                      <span>Acompte réglé :</span>
+                      <span>- {formatAmount(selectedInvoice.paidAmount)}</span>
+                    </div>
+                    <div className="receipt-row" style={{ fontWeight: 700, color: selectedInvoice.total - selectedInvoice.paidAmount <= 0 ? "#166534" : "#B45309" }}>
+                      <span>Solde restant :</span>
+                      <span>{selectedInvoice.total - selectedInvoice.paidAmount <= 0 ? "0 FCFA (Soldé)" : formatAmount(selectedInvoice.total - selectedInvoice.paidAmount)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -607,16 +705,16 @@ function InvoicesPage() {
                   className="btn btn-primary"
                   onClick={() => handleConvertToInvoice(selectedInvoice)}
                 >
-                  <RefreshCw size={16} /> Convertir ce devis en Facture
+                  <ArrowRightLeft size={16} /> Convertir ce devis en Facture commerciale
                 </button>
               ) : (
                 <button
                   type="button"
-                  className={`btn ${selectedInvoice.status === "PAID" ? "btn-secondary" : "btn-success"}`}
-                  onClick={() => handleTogglePaymentStatus(selectedInvoice)}
+                  className={`btn ${selectedInvoice.status === "PAID" ? "btn-secondary" : "btn-primary"}`}
+                  onClick={() => handleOpenPaymentModal(selectedInvoice)}
                 >
                   <CreditCard size={16} />
-                  {selectedInvoice.status === "PAID" ? "Marquer comme non payée" : "Marquer comme encaissée"}
+                  {selectedInvoice.status === "PAID" ? "Gérer le règlement (Soldée)" : "Enregistrer un règlement"}
                 </button>
               )}
 
@@ -649,6 +747,125 @@ function InvoicesPage() {
               </button>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Modal d'enregistrement de règlement / acompte */}
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={handleClosePaymentModal}
+        title={`Enregistrer un règlement — ${paymentInvoice?.invoiceNumber || ""}`}
+      >
+        {paymentInvoice && (
+          <form onSubmit={handleSavePayment}>
+            <div style={{ background: "var(--bg-canvas)", padding: "16px", borderRadius: "var(--radius-md)", marginBottom: "16px", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Client</span>
+                <strong style={{ fontSize: "13px" }}>{paymentInvoice.customerName}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Total facture</span>
+                <span style={{ fontSize: "14px", fontWeight: 700 }}>{formatAmount(paymentInvoice.total)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Déjà encaissé</span>
+                <span style={{ fontSize: "13px", color: "#166534", fontWeight: 600 }}>{formatAmount(paymentInvoice.paidAmount || 0)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700 }}>Reste à percevoir</span>
+                <strong style={{ fontSize: "15px", color: "var(--primary)" }}>
+                  {formatAmount(Math.max(0, paymentInvoice.total - (paymentInvoice.paidAmount || 0)))}
+                </strong>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: "16px" }}>
+              <label className="form-label" style={{ fontWeight: 700 }}>
+                Montant encaissé lors de ce versement ({currency})
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={Math.max(1, paymentInvoice.total - (paymentInvoice.paidAmount || 0))}
+                className="form-control"
+                placeholder="Ex: 50000"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                required
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setPaymentAmount(Math.max(0, paymentInvoice.total - (paymentInvoice.paidAmount || 0)))}
+                >
+                  Solde total ({formatAmount(Math.max(0, paymentInvoice.total - (paymentInvoice.paidAmount || 0)))})
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setPaymentAmount(Math.round(paymentInvoice.total * 0.5))}
+                >
+                  Acompte 50%
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setPaymentAmount(Math.round(paymentInvoice.total * 0.3))}
+                >
+                  Acompte 30%
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: "20px" }}>
+              <label className="form-label">Canal d'encaissement</label>
+              <select
+                className="form-control"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="CASH">Espèces</option>
+                <option value="WAVE">Wave Mobile Money</option>
+                <option value="ORANGE_MONEY">Orange Money</option>
+                <option value="MOMO">MTN MoMo</option>
+                <option value="TRANSFER">Virement bancaire</option>
+                <option value="CHEQUE">Chèque</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "14px", borderTop: "1px solid var(--border)", gap: "10px" }}>
+              {paymentInvoice.paidAmount > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleResetPayment(paymentInvoice)}
+                  style={{ color: "var(--danger)" }}
+                >
+                  Remettre à zéro
+                </button>
+              )}
+              <div style={{ display: "flex", gap: "8px", marginLeft: "auto" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleClosePaymentModal}
+                  disabled={paymentSubmitting}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={paymentSubmitting || !paymentAmount}
+                >
+                  <CheckCircle2 size={16} />
+                  {paymentSubmitting ? "Enregistrement..." : "Valider l'encaissement"}
+                </button>
+              </div>
+            </div>
+          </form>
         )}
       </Modal>
     </div>
